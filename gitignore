@@ -1,0 +1,122 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache/
+nosetests.xml
+coverage.xml
+*.cover
+*.py.cover
+*.lcov
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Type checking / linting
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+.ruff_cache/
+
+# Jupyter Notebook / IPython
+.ipynb_checkpoints/
+profile_default/
+ipython_config.py
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+__pypackages__/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+.envrc
+*.pem
+*.key
+
+# Logs and local databases
+*.log
+db.sqlite3
+db.sqlite3-journal
+*.sqlite3
+*.db
+
+# Framework/project generated files
+instance/
+.webassets-cache/
+.scrapy/
+docs/_build/
+/site
+celerybeat-schedule*
+celerybeat.pid
+
+# IDE / editor
+.idea/
+.vscode/
+*.code-workspace
+tempCodeRunnerFile.py
+
+# Operating system files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local data/model/output folders commonly used in Python/AI projects
+outputs/
+runs/
+checkpoints/
+wandb/
+mlruns/
+*.pt
+*.pth
+*.onnx
+
+# Local configuration / package publishing secrets
+.pypirc
+.streamlit/secrets.toml
