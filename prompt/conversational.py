@@ -78,7 +78,7 @@ class ConversationalPromptBuilder(BasePromptBuilder):
         else:
             history_block = ""
 
-        system_text = self._SYSTEM_VI if vi else self._SYSTEM_EN
+        system_text = self._SYSTEM_EN  # always EN for reliability
         user_text   = (self._USER_VI if vi else self._USER_EN).format(
             context=context,
             history_block=history_block,
@@ -86,7 +86,9 @@ class ConversationalPromptBuilder(BasePromptBuilder):
         )
 
         if self.system_instruction:
-            system_text = self.system_instruction.strip() + "\n\n" + system_text
+            # Nếu đã có system_instruction (domain role + rules), bỏ base text
+            # để tránh "You are a precise research assistant" xuất hiện lại
+            system_text = self.system_instruction.strip()
 
         # Xây messages: system + lịch sử dạng alternating turns + user hiện tại
         messages: list[dict] = [{"role": "system", "content": system_text}]

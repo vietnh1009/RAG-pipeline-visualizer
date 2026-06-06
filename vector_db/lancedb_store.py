@@ -46,7 +46,7 @@ class LanceDBVectorStore(BaseVectorStore):
     def __init__(
         self,
         collection_name: str  = "rag",
-        persist_dir:     str  = "./storage/lancedb",
+        persist_dir:     str  = "./storage/lancedb_rag",
         distance:        str  = "cosine",
         force_reindex:   bool = False,
     ):

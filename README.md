@@ -1,8 +1,28 @@
-# 🔍 RAG Pipeline Visualizer
+<p align="center">
+  <h1 align="center">🔬 RAG-pipeline-visualizer</h1>
+</p>
 
-**RAG Pipeline Visualizer** là một ứng dụng Streamlit giúp bạn xây dựng, cấu hình và trực quan hóa từng bước trong pipeline RAG (Retrieval-Augmented Generation) — từ bước load tài liệu PDF đến bước sinh câu trả lời từ LLM.
+<p align="center">
+  <b>RAG-pipeline-visualizer</b> là ứng dụng Streamlit giúp bạn xây dựng, cấu hình và <b>trực quan hóa từng bước</b> trong pipeline RAG (Retrieval-Augmented Generation) — từ bước load tài liệu PDF đến bước sinh câu trả lời từ LLM.
+</p>
 
-> **Mục tiêu:** Giúp người dùng hiểu rõ tác động của từng cấu hình (chunking strategy, embedding model, vector DB, retrieval strategy, ...) đến chất lượng câu trả lời cuối cùng.
+---
+
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=YPcXqbcZqaE">
+    <img src="https://img.youtube.com/vi/YPcXqbcZqaE/maxresdefault.jpg" width=800>
+  </a><br/>
+  <i>▶️ Indexing Pipeline — Load · Chunk · Embed · Store</i>
+</p>
+
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=2THKb3pnFIk">
+    <img src="https://img.youtube.com/vi/2THKb3pnFIk/maxresdefault.jpg" width=800>
+  </a><br/>
+  <i>▶️ Generation Pipeline — Retrieve · Rerank · Prompt · Generate</i>
+</p>
+
+> **Mục tiêu:** Cho phép người dùng thử nghiệm và quan sát tác động của từng lựa chọn cấu hình (chunking strategy, embedding model, vector DB, retrieval strategy, ...) đến chất lượng câu trả lời cuối cùng — không cần viết một dòng code.
 
 ---
 
@@ -14,129 +34,146 @@
 4. [Tạo môi trường & Cài đặt](#4-tạo-môi-trường--cài-đặt)
 5. [Cấu hình API Keys](#5-cấu-hình-api-keys)
 6. [Khởi động ứng dụng](#6-khởi-động-ứng-dụng)
-7. [Hướng dẫn sử dụng chi tiết](#7-hướng-dẫn-sử-dụng-chi-tiết)
-   - [Bước 0 — Chọn tài liệu nguồn](#bước-0--chọn-tài-liệu-nguồn)
-   - [Bước 1 — Loader](#bước-1--loader-pdf)
-   - [Bước 2 — Chunking](#bước-2--chunking)
-   - [Bước 3 — Embedding](#bước-3--embedding)
-   - [Bước 4 — Vector DB](#bước-4--vector-db)
-   - [Bước 5 — Process](#bước-5--process)
-   - [Bước 6 — Xem kết quả Indexing](#bước-6--xem-kết-quả-indexing)
-   - [Bước 7 — Pre-retrieval](#bước-7--pre-retrieval-tuỳ-chọn)
-   - [Bước 8 — Retrieval](#bước-8--retrieval)
-   - [Bước 9 — Post-retrieval](#bước-9--post-retrieval-tuỳ-chọn)
-   - [Bước 10 — Prompt](#bước-10--prompt)
-   - [Bước 11 — Generation](#bước-11--generation)
-   - [Bước 12 — Chạy Query](#bước-12--chạy-query)
-8. [Demo End-to-End: PDF phức tạp → Câu trả lời có trích dẫn](#8-demo-end-to-end)
-9. [Pipeline Cache](#9-pipeline-cache)
-10. [config.yaml](#10-configyaml)
-11. [Troubleshooting](#11-troubleshooting)
+7. [Hướng dẫn sử dụng — Indexing Pipeline](#7-hướng-dẫn-sử-dụng--indexing-pipeline)
+8. [Hướng dẫn sử dụng — Generation Pipeline](#8-hướng-dẫn-sử-dụng--generation-pipeline)
+9. [Demo End-to-End: PDF phức tạp → Câu trả lời có trích dẫn](#9-demo-end-to-end)
+10. [Pipeline Cache](#10-pipeline-cache)
+11. [config.yaml](#11-configyaml)
+12. [Troubleshooting](#12-troubleshooting)
 
 ---
 
 ## 1. Tổng quan Pipeline
 
+Pipeline gồm hai stage độc lập, tương ứng với hai page trong ứng dụng:
+
+**STAGE 1 — INDEXING (offline)**
+
 ```
-[File PDF] ──► [1. Loader] ──► [2. Chunking] ──► [3. Embedding] ──► [4. Vector DB]
-                                                                            │
-                                                                            ▼
-[Câu trả lời] ◄── [11. Generation] ◄── [10. Prompt] ◄── [9. Post-retrieval] ◄── [8. Retrieval] ◄── [7. Pre-retrieval] ◄── [Query]
+[File PDF]  →  [1. Loader]  →  [2. Chunking]  →  [3. Embedding]  →  [4. Vector DB]
 ```
 
-| Bước | Tên | Mô tả | Bắt buộc? |
-|------|-----|--------|-----------|
-| 1 | **Loader** | Parse PDF → `list[Document]` | ✅ |
-| 2 | **Chunking** | Cắt Document thành chunk nhỏ | ✅ |
-| 3 | **Embedding** | Embed chunk → dense/sparse vectors | ✅ |
-| 4 | **Vector DB** | Lưu vectors + index | ✅ |
-| 5–6 | **Process / Results** | Chạy indexing và xem kết quả | ✅ |
-| 7 | **Pre-retrieval** | Biến đổi query trước khi tìm kiếm | ❌ Tuỳ chọn |
-| 8 | **Retrieval** | Tìm kiếm chunk liên quan | ✅ |
-| 9 | **Post-retrieval** | Rerank, filter, compress | ❌ Tuỳ chọn |
-| 10 | **Prompt** | Xây dựng prompt đưa vào LLM | ✅ |
-| 11 | **Generation** | LLM sinh câu trả lời cuối cùng | ✅ |
+**STAGE 2 — GENERATION (online)**
+
+```
+[Query]  →  [7. Pre-retrieval]  →  [8. Retrieval]  →  [9. Post-retrieval]
+                                                    →  [10. Prompt]  →  [11. Generation]  →  [Câu trả lời]
+```
+
+| Bước | Tên | Mô tả | Stage | Bắt buộc |
+|------|-----|--------|-------|---------|
+| 1 | **Loader** | Parse tài liệu PDF → `list[Document]` | Indexing | ✅ |
+| 2 | **Chunking** | Cắt Document thành chunk nhỏ hơn | Indexing | ✅ |
+| 3 | **Embedding** | Chuyển chunk thành dense/sparse vectors | Indexing | ✅ |
+| 4 | **Vector DB** | Lưu vectors vào index có thể tìm kiếm | Indexing | ✅ |
+| 7 | **Pre-retrieval** | Biến đổi query trước khi tìm kiếm | Generation | ❌ Tuỳ chọn |
+| 8 | **Retrieval** | Tìm chunk liên quan từ Vector DB | Generation | ✅ |
+| 9 | **Post-retrieval** | Rerank, filter, nén context | Generation | ❌ Tuỳ chọn |
+| 10 | **Prompt** | Xây dựng prompt đưa vào LLM | Generation | ✅ |
+| 11 | **Generation** | LLM sinh câu trả lời cuối cùng | Generation | ✅ |
 
 ---
 
 ## 2. Cấu trúc Project
 
 ```
-RefinedRAG/
-├── app_visualizer.py          # Script chính — chạy bằng streamlit run
-├── pipeline_cache.py          # Step-level disk cache
-├── config.yaml                # Cấu hình mặc định cho toàn bộ pipeline
-├── requirements.txt           # Dependencies
-├── .env                       # API keys (tạo thủ công, KHÔNG commit)
+RAG-pipeline-visualizer/
+├── app.py                          # Entry point — chạy bằng: streamlit run app.py
+├── pipeline_cache.py               # Step-level disk cache (SHA-256 fingerprint)
+├── config.yaml                     # Cấu hình mặc định cho toàn bộ pipeline
+├── requirements.txt                # Dependencies
+├── .env                            # API keys (tạo thủ công, KHÔNG commit lên Git)
 │
-├── loader/                    # Bước 1: Load PDF
-│   ├── __init__.py
-│   ├── base.py
-│   ├── directory_loader.py    # PDFDocumentLoader (điểm vào chính)
-│   ├── pdf_loader.py          # 7 PDF loader class
+├── pipeline/                       # Hai pipeline class chính
+│   ├── indexing_pipeline.py        # IndexingPipeline (Stage 1)
+│   └── generation_pipeline.py      # GenerationPipeline (Stage 2)
+│
+├── loader/                         # Bước 1 — Load PDF
+│   ├── pdf_loader.py               # 7 PDF loader strategies
+│   ├── directory_loader.py         # Scan thư mục, dispatch đến pdf_loader
 │   └── utils.py
 │
-├── chunking/                  # Bước 2: Chunking
-│   ├── __init__.py
-│   ├── base.py
-│   ├── factory.py
-│   ├── recursive.py
-│   ├── token_based.py
-│   ├── format_aware.py
-│   ├── sentence_aware.py
-│   ├── semantic.py
-│   ├── hierarchical.py
-│   ├── contextual.py
-│   ├── deduplication.py
-│   └── utils.py
+├── chunking/                       # Bước 2 — Chunking
+│   ├── recursive.py                # RecursiveCharacterTextSplitter
+│   ├── token_based.py              # Tiktoken-based
+│   ├── format_aware.py             # Markdown / code / HTML boundaries
+│   ├── sentence_aware.py           # NLTK sentence boundaries
+│   ├── semantic.py                 # Cosine similarity breakpoints
+│   ├── hierarchical.py             # Parent + Child chunks
+│   ├── contextual.py               # LLM-generated context prefix
+│   └── deduplication.py            # MinHash deduplication
 │
-├── embedding/                 # Bước 3: Embedding
-│   ├── __init__.py
-│   ├── base.py
-│   ├── factory.py
-│   └── utils.py
+├── embedding/                      # Bước 3 — Embedding
+│   ├── openai_embedder.py
+│   ├── cohere_embedder.py
+│   ├── huggingface_embedder.py
+│   ├── ollama_embedder.py
+│   ├── fastembed_embedder.py
+│   ├── sparse_embedder.py          # BM25 / SPLADE
+│   └── pipeline.py                 # Dense + sparse combination
 │
-├── vector_db/                 # Bước 4: Vector Store
-│   ├── __init__.py
-│   ├── base.py
-│   ├── factory.py
-│   └── utils.py
+├── vector_db/                      # Bước 4 — Vector Store
+│   ├── chroma_store.py
+│   ├── faiss_store.py
+│   ├── qdrant_store.py
+│   ├── lancedb_store.py
+│   ├── weaviate_store.py
+│   ├── pgvector_store.py
+│   └── pinecone_store.py
 │
-├── pre_retrieval/             # Bước 7: Query Transformation
-│   ├── __init__.py
-│   ├── base.py
+├── pre_retrieval/                  # Bước 7 — Query Transformation
+│   ├── pipeline.py                 # Chain nhiều transformers
+│   └── factory.py
+│
+├── retrieval/                      # Bước 8 — Retrieval
+│   ├── dense.py
+│   ├── sparse.py
+│   ├── hybrid.py                   # RRF / Weighted / DBSF fusion
+│   ├── multi_query.py
+│   ├── parent_document.py
+│   ├── sentence_window.py
+│   └── multi_hop.py
+│
+├── post_retrieval/                 # Bước 9 — Post-processing
 │   ├── pipeline.py
-│   └── factory.py
+│   ├── cross_encoder_reranker.py
+│   ├── cohere_reranker.py
+│   ├── llm_reranker.py
+│   ├── mmr_filter.py
+│   ├── redundancy_filter.py
+│   ├── context_compressor.py
+│   └── context_orderer.py
 │
-├── retrieval/                 # Bước 8: Retrieval
-│   ├── __init__.py
-│   ├── base.py
-│   └── factory.py
-│
-├── post_retrieval/            # Bước 9: Post-processing
-│   ├── __init__.py
-│   ├── base.py
-│   ├── pipeline.py
-│   └── factory.py
-│
-├── prompt/                    # Bước 10: Prompt Builder
-│   ├── __init__.py
-│   ├── base.py
-│   ├── factory.py
+├── prompt/                         # Bước 10 — Prompt Builder
 │   ├── basic.py
 │   ├── citation.py
 │   ├── conversational.py
 │   └── structured_output.py
 │
-└── generation/                # Bước 11: LLM Generation
-    ├── __init__.py
-    ├── base.py
-    ├── factory.py
-    ├── openai_generator.py
-    ├── anthropic_generator.py
-    ├── google_generator.py
-    ├── ollama_generator.py
-    └── cohere_generator.py
+├── generation/                     # Bước 11 — LLM Generation
+│   ├── openai_generator.py
+│   ├── anthropic_generator.py
+│   ├── google_generator.py
+│   ├── ollama_generator.py
+│   └── cohere_generator.py
+│
+├── ui/
+│   ├── pages/
+│   │   ├── welcome.py              # 🏠 Trang chủ
+│   │   ├── indexing.py             # 🗃️ Indexing pipeline UI
+│   │   └── generation.py          # 💬 Generation pipeline UI
+│   ├── settings/                   # Sidebar config panels
+│   ├── results/                    # Result visualization panels
+│   └── components/                 # Shared components
+│
+├── core/
+│   ├── pipeline_runners.py         # run_loader, run_chunker, run_embedder
+│   ├── cache_helpers.py            # Cache helpers
+│   └── constants.py                # App-wide constants & metadata
+│
+└── utils/
+    ├── env.py                      # _is_installed, API key helpers, GPU detect
+    └── badges.py                   # File type / chunk type badges
 ```
 
 ---
@@ -145,38 +182,42 @@ RefinedRAG/
 
 | Yêu cầu | Tối thiểu | Khuyến nghị |
 |---------|-----------|-------------|
-| **Python** | 3.10 | 3.11 / 3.12 |
+| **Python** | 3.10 | **3.11** |
 | **RAM** | 4 GB | 8 GB+ |
-| **Disk** | 2 GB | 5 GB+ (models cache) |
-| **GPU** | Không bắt buộc | NVIDIA CUDA (tăng tốc embedding/reranker) |
+| **Disk** | 2 GB | 5 GB+ *(model cache lần đầu)* |
+| **GPU** | Không bắt buộc | NVIDIA CUDA *(tăng tốc embedding & reranker)* |
 | **OS** | Windows 10 / macOS 12 / Ubuntu 20.04 | Bất kỳ |
 | **Internet** | Cần để gọi API (OpenAI, Anthropic, ...) | — |
 
-> 💡 Nếu dùng **Ollama** để chạy LLM local, khuyến nghị RAM ≥ 8 GB và có SSD.
+> 💡 **Ollama (LLM local):** Khuyến nghị RAM ≥ 8 GB và SSD. GPU không bắt buộc nhưng tăng tốc đáng kể.
 
 ---
 
 ## 4. Tạo môi trường & Cài đặt
 
-### Bước 4.1 — Clone repository
+### 4.1 — Clone repository
 
 ```bash
-git clone https://github.com/<your-username>/RefinedRAG.git
-cd RefinedRAG
+git clone https://github.com/<your-username>/RAG-pipeline-visualizer.git
+cd RAG-pipeline-visualizer
 ```
 
-### Bước 4.2 — Tạo virtual environment
+### 4.2 — Tạo virtual environment
 
-**Dùng `venv` (built-in):**
+**Dùng `venv` (Python built-in):**
 
 ```bash
-# Windows
-python -m venv .venv
-.venv\Scripts\activate
-
 # macOS / Linux
-python3 -m venv .venv
+python3.11 -m venv .venv
 source .venv/bin/activate
+
+# Windows (Command Prompt)
+python -m venv .venv
+.venv\Scripts\activate.bat
+
+# Windows (PowerShell)
+python -m venv .venv
+.venv\Scripts\Activate.ps1
 ```
 
 **Hoặc dùng `conda`:**
@@ -186,56 +227,91 @@ conda create -n rag_visualizer python=3.11 -y
 conda activate rag_visualizer
 ```
 
-### Bước 4.3 — Cài đặt dependencies bắt buộc
+> ✅ Kiểm tra Python version: `python --version` → phải trả về `Python 3.11.x`
+
+### 4.3 — Upgrade pip
+
+```bash
+pip install --upgrade pip
+```
+
+### 4.4 — Cài đặt dependencies bắt buộc
 
 ```bash
 pip install -r requirements.txt
 ```
 
-> ⏱️ Lần đầu mất 3–5 phút tuỳ tốc độ mạng.
+> ⏱️ Lần đầu mất khoảng **3–7 phút** tuỳ tốc độ mạng. Các lần sau sẽ nhanh hơn nhờ cache pip.
 
-### Bước 4.4 — Cài đặt thêm tuỳ strategy (tuỳ chọn)
+### 4.5 — Cài đặt thêm tuỳ tính năng muốn dùng
 
-**Nếu muốn dùng Marker PDF** (khuyến nghị cho PDF phức tạp có công thức, bảng):
+#### Loader nâng cao
+
+**Marker PDF** *(khuyến nghị cho PDF phức tạp: bảng, công thức, hình ảnh)*:
 
 ```bash
 pip install marker-pdf==1.6.2
 ```
 
-**Nếu muốn dùng Docling:**
+> ⚠️ Marker tải các model AI (~1.5 GB) trong lần chạy đầu tiên. Cần kết nối internet.
+
+**Docling** *(IBM Research, chất lượng Markdown rất cao)*:
 
 ```bash
 pip install docling==2.28.0
 ```
 
-**Nếu muốn dùng Anthropic Claude:**
+**Unstructured** *(OCR tổng hợp — tốt nhất cho PDF scan)*:
 
 ```bash
-pip install anthropic==0.43.0
+pip install 'unstructured[pdf]==0.16.12'
 ```
 
-**Nếu muốn dùng Google Gemini:**
+#### Embedding providers khác
 
 ```bash
+# Cohere (multilingual, tốt cho tiếng Việt)
+pip install cohere==5.13.12 langchain-cohere==0.4.3
+
+# Google Gemini
 pip install google-generativeai==0.8.3 langchain-google-genai==2.0.11
-```
 
-**Nếu muốn dùng Ollama (LLM local):**
-
-```bash
-# 1. Cài Ollama server: https://ollama.com/download
-# 2. Cài Python client:
+# Ollama (local)
 pip install ollama==0.4.7 langchain-ollama==0.2.3
-
-# 3. Pull model (ví dụ):
-ollama pull qwen2.5:7b      # Khuyến nghị — tiếng Việt OK, ~4.7 GB
-ollama pull llama3.2:3b     # Nhẹ nhất — ~2 GB
 ```
 
-**Nếu muốn dùng Qdrant:**
+#### Generation (LLM) providers khác
 
 ```bash
+# Anthropic Claude
+pip install anthropic==0.43.0
+
+# Ollama (đã cài ở trên nếu dùng cả embedding)
+```
+
+#### Vector DB khác
+
+```bash
+# Qdrant (production, filtering phức tạp)
 pip install qdrant-client==1.13.3 langchain-qdrant==0.2.0
+
+# LanceDB (embedded, không cần server)
+pip install lancedb==0.17.0
+
+# Weaviate (hybrid out-of-the-box)
+pip install weaviate-client==4.10.4 langchain-weaviate==0.0.3
+
+# PGVector (nếu đã có PostgreSQL)
+pip install 'psycopg[binary]==3.2.4' langchain-postgres==0.0.13
+
+# Pinecone (managed cloud)
+pip install pinecone==5.0.1 langchain-pinecone==0.2.0
+```
+
+#### SPLADE sparse embedding *(tốt hơn BM25, cần GPU khuyến nghị)*
+
+```bash
+pip install transformers==4.47.1 torch==2.5.1
 ```
 
 ---
@@ -245,31 +321,49 @@ pip install qdrant-client==1.13.3 langchain-qdrant==0.2.0
 Tạo file `.env` ở thư mục gốc của project:
 
 ```bash
-touch .env      # macOS/Linux
-# hoặc: New-Item .env -ItemType File  # Windows PowerShell
+# macOS / Linux
+cp .env.example .env    # nếu có file mẫu
+# hoặc tạo mới:
+touch .env
+
+# Windows PowerShell
+New-Item .env -ItemType File
 ```
 
 Mở `.env` và điền API keys cần thiết:
 
 ```dotenv
-# OpenAI (dùng cho embedding + generation)
+# ─── LLM & Embedding Providers ────────────────────────────────────
+# Bắt buộc nếu dùng OpenAI embedding hoặc generation
 OPENAI_API_KEY=sk-proj-...
 
-# Anthropic Claude
-# ANTHROPIC_API_KEY=sk-ant-...
+# Anthropic Claude (nếu dùng)
+ANTHROPIC_API_KEY=sk-ant-...
 
-# Google Gemini
-# GOOGLE_API_KEY=AIza...
+# Google Gemini (nếu dùng)
+GOOGLE_API_KEY=AIza...
 
-# Cohere
-# COHERE_API_KEY=...
+# Cohere (nếu dùng)
+COHERE_API_KEY=...
 
-# Qdrant Cloud (tuỳ chọn — để trống nếu dùng local)
-# QDRANT_URL=https://...
-# QDRANT_API_KEY=...
+# ─── Vector Databases ─────────────────────────────────────────────
+# Qdrant (để trống nếu dùng local Docker)
+QDRANT_URL=http://localhost:6333
+QDRANT_API_KEY=
+
+# Weaviate (để trống nếu dùng local)
+WEAVIATE_URL=http://localhost:8080
+WEAVIATE_API_KEY=
 
 # Pinecone
-# PINECONE_API_KEY=...
+PINECONE_API_KEY=...
+
+# PGVector
+DATABASE_URL=postgresql://user:password@localhost:5432/ragdb
+
+# ─── Local Storage ────────────────────────────────────────────────
+CHROMA_PERSIST_DIR=./storage/chroma_db
+FAISS_PERSIST_DIR=./storage/faiss_index
 ```
 
 > ⚠️ **Quan trọng:** Thêm `.env` vào `.gitignore` để tránh lộ API key khi push lên GitHub.
@@ -283,64 +377,84 @@ echo ".env" >> .gitignore
 ## 6. Khởi động ứng dụng
 
 ```bash
-# Đảm bảo đang ở thư mục gốc project và đã activate venv
-streamlit run app_visualizer.py
+# Đảm bảo đang ở thư mục gốc project và đã activate môi trường ảo
+streamlit run app.py
 ```
 
-Mặc định app chạy tại: **http://localhost:8501**
+Mặc định app chạy tại: **[http://localhost:8501](http://localhost:8501)**
 
 Nếu port 8501 đã bị chiếm:
 
 ```bash
-streamlit run app_visualizer.py --server.port 8502
+streamlit run app.py --server.port 8502
 ```
 
-![Màn hình khởi động](docs/screenshots/00_launch.png)
+Mở rộng kích thước upload file (mặc định Streamlit giới hạn 200 MB):
+
+```bash
+streamlit run app.py --server.maxUploadSize 500
+```
+
+Ứng dụng có **3 page** điều hướng qua sidebar:
+
+| Page | Icon | Mô tả |
+|------|------|-------|
+| **Trang chủ** | 🏠 | Giới thiệu tổng quan, hướng dẫn nhanh |
+| **Indexing** | 🗃️ | Stage 1: Load → Chunk → Embed → Lưu vào Vector DB |
+| **Generation** | 💬 | Stage 2: Query → Retrieve → Rerank → Generate |
 
 ---
 
-## 7. Hướng dẫn sử dụng chi tiết
+## 7. Hướng dẫn sử dụng — Indexing Pipeline
 
-Giao diện app gồm hai phần:
-- **Sidebar trái:** Tất cả cài đặt cấu hình (Bước 1–11)
-- **Vùng chính phải:** Kết quả trực quan hóa từng bước
+Chuyển sang page **🗃️ Indexing** từ sidebar.
 
 ---
 
-### Bước 0 — Chọn tài liệu nguồn
+### Bước 0 — Tải tài liệu lên
 
-Ở đầu sidebar, bạn có hai cách nhập tài liệu:
+Ở đầu sidebar, chọn cách nạp tài liệu:
 
-**Cách 1 — Upload file trực tiếp:** Nhấn vào ô **"Kéo thả hoặc browse file PDF"** → chọn 1 hoặc nhiều file PDF.
+**Cách 1 — Upload file trực tiếp:**
+Nhấn ô **"Kéo thả hoặc browse file"** → chọn một hoặc nhiều file PDF. Phù hợp khi xử lý 1–5 file.
 
-**Cách 2 — Nhập đường dẫn thư mục:** Điền đường dẫn tuyệt đối đến thư mục chứa PDF. App sẽ tự động tìm tất cả file `.pdf` trong thư mục đó (bao gồm cả subfolder).
+**Cách 2 — Nhập đường dẫn thư mục:**
+Nhập đường dẫn tuyệt đối đến thư mục chứa PDF. App tự động tìm toàn bộ `.pdf` trong thư mục đó (bao gồm subfolder).
 
-![Chọn tài liệu](docs/screenshots/01_upload.png)
-
-> 💡 **Upload** phù hợp khi cần xử lý 1–5 file. **Thư mục** khi có nhiều file hoặc muốn chạy lại với dataset cố định.
+> 💡 Dùng **Upload** cho demo nhanh; dùng **Thư mục** khi xử lý dataset lớn hoặc muốn chạy lại thường xuyên.
 
 ---
 
-### Bước 1 — Loader (PDF)
+### Bước 1 — Loader (PDF Strategy)
 
 Mở expander **"1️⃣ Loader"** trong sidebar.
 
-![Loader settings](docs/screenshots/02_loader_settings.png)
-
-#### Các strategy và khi nào chọn:
+Chọn **PDF Strategy** phù hợp với tài liệu:
 
 | Strategy | Tốc độ | Bảng | Công thức | Khi nào dùng |
 |----------|--------|------|-----------|--------------|
-| `pypdf` | ⚡⚡⚡ Rất nhanh | ❌ | ❌ | Prototype nhanh, PDF text thuần |
-| `pymupdf` | ⚡⚡⚡ Rất nhanh | ⚠️ Cơ bản | ❌ | PDF layout đơn giản |
-| `pdfplumber` | ⚡⚡ Nhanh | ✅ Tốt nhất | ❌ | PDF có nhiều bảng dạng text |
-| `marker` ⭐ | ⚡ Chậm | ✅✅ Rất tốt | ✅ LaTeX | **PDF phức tạp: bảng, công thức, hình** |
-| `docling` | ⚡ Chậm | ✅✅ Rất tốt | ✅ | Tài liệu học thuật, báo cáo phức tạp |
-| `unstructured` | ⚡ Chậm | ✅✅ Rất tốt | ✅ OCR | PDF scan, hình ảnh cần OCR |
+| `pypdf` | ⚡⚡⚡ | ❌ | ❌ | Prototype nhanh, PDF text thuần |
+| `pymupdf` | ⚡⚡⚡ | ⚠️ Cơ bản | ❌ | PDF layout đơn giản |
+| `pdfplumber` | ⚡⚡ | ✅ Tốt nhất | ❌ | PDF nhiều bảng dạng text layer |
+| `marker` ⭐ | ⚡ Chậm | ✅✅ | ✅ LaTeX | **PDF phức tạp: bảng, công thức, hình** |
+| `docling` | ⚡ Chậm | ✅✅ | ✅ | Tài liệu học thuật, báo cáo |
+| `unstructured` | ⚡ Chậm | ✅✅ | ✅ OCR | PDF scan, cần OCR |
 
-**Kết quả hiển thị (tab "📄 Loader"):**
+**OCR Engine** *(nếu PDF là bản scan hoặc chứa ảnh có chữ)*:
 
-![Loader results](docs/screenshots/03_loader_results.png)
+| Engine | Khi nào dùng |
+|--------|-------------|
+| `none` | PDF có text layer *(mặc định)* |
+| `tesseract` | Văn bản in rõ trên nền trắng, 100+ ngôn ngữ |
+| `paddleocr` | Tiếng Việt, CJK, layout phức tạp |
+| `easyocr` | Đa ngôn ngữ, dễ cài, ổn định trên CPU |
+| `surya` | Đa ngôn ngữ chất lượng cao, transformer-based |
+
+Các tuỳ chọn thêm:
+- **Trích xuất bảng**: Chuyển bảng trong PDF thành Markdown table *(dùng với pdfplumber, unstructured)*.
+- **Mô tả hình ảnh bằng VLM**: Dùng GPT-4o-mini hoặc Ollama vision model để mô tả hình ảnh trong PDF thành text. Hữu ích khi PDF chứa biểu đồ, sơ đồ quan trọng.
+
+**Kết quả** (tab **"📄 Loader"** ở vùng chính): Số document, tổng ký tự, bảng thống kê theo file, preview nội dung từng document.
 
 ---
 
@@ -348,26 +462,21 @@ Mở expander **"1️⃣ Loader"** trong sidebar.
 
 Mở expander **"2️⃣ Chunking"** trong sidebar.
 
-![Chunking settings](docs/screenshots/04_chunking_settings.png)
-
-#### Các strategy và khi nào chọn:
-
 | Strategy | Cơ chế | Best for |
 |----------|--------|---------|
-| `recursive` ⭐ | Đệ quy: đoạn→dòng→câu→ký tự | Mặc định tốt nhất |
-| `token_based` | Đếm BPE token | Khi embedding model có token limit chặt |
-| `format_aware` | Nhận diện Markdown heading, code block | **PDF qua Marker/Docling** |
-| `sentence_aware` | Ranh giới câu (NLTK) | Q&A, FAQ, văn bản văn học |
-| `semantic` | Cosine similarity | PDF nhiều chủ đề khác nhau |
-| `hierarchical` | Parent (lớn) + Child (nhỏ) | Corpus lớn, cần độ chính xác cao |
-| `contextual` | Recursive + LLM prefix | Production, có LLM budget |
+| `recursive` ⭐ | Cắt theo thứ tự: đoạn→dòng→câu→ký tự | **Mặc định tốt nhất cho hầu hết trường hợp** |
+| `token_based` | Đếm BPE token (tiktoken) thay vì ký tự | Tiếng Việt, tránh silent truncation |
+| `format_aware` | Nhận diện cấu trúc: Markdown heading, code block, HTML tag | **PDF qua Marker/Docling** ← khuyến nghị kết hợp |
+| `sentence_aware` | Ranh giới chunk = cuối câu (NLTK) | FAQ, Q&A ngắn, văn học |
+| `semantic` | Phát hiện ranh giới chủ đề qua cosine similarity | Văn bản đa chủ đề |
+| `hierarchical` | Tạo cặp parent (lớn) + child (nhỏ) | Corpus lớn, cần độ chính xác cao |
+| `contextual` | LLM sinh context prefix cho mỗi chunk | Production, có LLM budget |
 
-- **Chunk size:** Số ký tự tối đa mỗi chunk. Thường 512–1500.
-- **Chunk overlap:** Số ký tự chồng lắp giữa 2 chunk liên tiếp. Thường 10–15% của chunk size.
+Tham số quan trọng:
+- **Chunk size**: Số ký tự tối đa mỗi chunk. Thông thường **512–1500**.
+- **Chunk overlap**: Số ký tự chồng lấp giữa 2 chunk liên tiếp. Thông thường **10–15% của chunk size**.
 
-**Kết quả hiển thị (tab "✂️ Chunking"):**
-
-![Chunking results](docs/screenshots/05_chunking_results.png)
+**Kết quả** (tab **"✂️ Chunking"**): Histogram phân phối chunk size, metrics min/max/mean/median, preview từng chunk với metadata.
 
 ---
 
@@ -375,27 +484,24 @@ Mở expander **"2️⃣ Chunking"** trong sidebar.
 
 Mở expander **"3️⃣ Embedding"** trong sidebar.
 
-![Embedding settings](docs/screenshots/06_embedding_settings.png)
-
-#### Các provider và model:
-
-| Provider | Model | Tiếng Việt | Chi phí | Best for |
-|----------|-------|------------|---------|---------|
-| **OpenAI** | `text-embedding-3-small` ⭐ | ⭐⭐⭐ | $0.02/1M | Mặc định tốt nhất |
-| **OpenAI** | `text-embedding-3-large` | ⭐⭐⭐ | $0.13/1M | Độ chính xác cao nhất |
-| **Cohere** | `embed-multilingual-v3.0` | ⭐⭐⭐⭐ | $0.10/1M | Corpus đa ngôn ngữ |
-| **HuggingFace** | `BAAI/bge-m3` | ⭐⭐⭐⭐ | Miễn phí | Local, VI tốt |
-| **HuggingFace** | `Qwen/Qwen3-Embedding` | ⭐⭐⭐⭐⭐ | Miễn phí | MTEB #1, VI tốt nhất |
-| **FastEmbed** | `multilingual-e5-small` | ⭐⭐ | Miễn phí | CPU, không GPU |
-| **Ollama** | `bge-m3` | ⭐⭐⭐⭐ | Miễn phí | Local server, privacy |
+| Provider | Model tiêu biểu | Tiếng Việt | Chi phí | Best for |
+|----------|-----------------|-----------|---------|---------|
+| **OpenAI** | `text-embedding-3-small` ⭐ | ⭐⭐⭐ | $0.02/1M | Mặc định cân bằng nhất |
+| **OpenAI** | `text-embedding-3-large` | ⭐⭐⭐ | $0.13/1M | Độ chính xác tối đa |
+| **Cohere** | `embed-multilingual-v3.0` | ⭐⭐⭐⭐ | $0.10/1M | Corpus tiếng Việt + đa ngôn ngữ |
+| **HuggingFace** | `BAAI/bge-m3` | ⭐⭐⭐⭐ | Miễn phí | Local, tốt cho VI |
+| **HuggingFace** | `Qwen/Qwen3-Embedding-4B` | ⭐⭐⭐⭐⭐ | Miễn phí | MTEB #1, tốt nhất cho VI |
+| **FastEmbed** | `multilingual-e5-small` | ⭐⭐⭐ | Miễn phí | CPU-only, không cần GPU |
+| **Ollama** | `bge-m3` | ⭐⭐⭐⭐ | Miễn phí | Hoàn toàn local, bảo mật cao |
 
 **Sparse Embedding (Hybrid Retrieval):**
-- `BM25` — Lexical matching, nhanh, không cần GPU. Khuyến nghị bật cho corpus tiếng Việt.
-- `SPLADE` — Sparse neural, hiệu quả hơn BM25, cần torch.
+- Checkbox **"Bật sparse embedding (hybrid retrieval)"**: Kết hợp dense vector với BM25/SPLADE để cải thiện recall, đặc biệt cho từ khoá, tên riêng, số liệu.
+- `BM25` — Lexical matching, không cần GPU, khuyến nghị bật mặc định.
+- `SPLADE` — Sparse neural, hiệu quả hơn BM25, cần `transformers` + `torch`.
 
-**Kết quả hiển thị (tab "🧮 Embedding"):**
+**MRL (Matryoshka Representation Learning):** Áp dụng cho OpenAI `text-embedding-3-*` và một số HuggingFace model. Cho phép cắt ngắn chiều vector (ví dụ từ 1536 → 512) mà không mất nhiều chất lượng, tiết kiệm storage.
 
-![Embedding results](docs/screenshots/07_embedding_results.png)
+**Kết quả** (tab **"🧮 Embedding"**): Embedding matrix shape, cosine similarity heatmap, nearest neighbors của từng chunk.
 
 ---
 
@@ -403,268 +509,308 @@ Mở expander **"3️⃣ Embedding"** trong sidebar.
 
 Mở expander **"4️⃣ Vector DB"** trong sidebar.
 
-![Vector DB settings](docs/screenshots/08_vdb_settings.png)
+| Provider | Mode | Scale | Hybrid | Best for |
+|----------|------|-------|--------|---------|
+| **Chroma** ⭐ | Local | < 10M | ❌* | Demo, dev, small corpus |
+| **FAISS** | Local | < 100M | ❌ | Prototype cực nhanh |
+| **Qdrant** | Self-host / Cloud | 1B+ | ✅ ACORN | Production, filtering phức tạp |
+| **LanceDB** | Local / Cloud | ~1B | ✅ | Embedded, columnar, DuckDB SQL |
+| **Weaviate** | Self-host / Cloud | ~1B | ✅ | Hybrid native out-of-the-box |
+| **PGVector** | Self-host | < 50M | ❌* | Đã có PostgreSQL infrastructure |
+| **Pinecone** | Managed cloud | ~1B | ✅ | Zero-ops, startup |
 
-#### Các Vector DB và khi nào chọn:
+*\* Hybrid thực hiện qua BM25 sparse index riêng kết hợp ở tầng retrieval.*
 
-| Store | Scale | Hybrid | Best for |
-|-------|-------|--------|---------|
-| **Chroma** ⭐ | < 1M | ✅ | Demo, dev, small corpus |
-| **FAISS** | < 100M | ❌ | Prototype cực nhanh |
-| **Qdrant** | 1B+ | ✅ ACORN | Production, filtering phức tạp |
-| **LanceDB** | < 1B | ✅ | Embedded, không cần server |
-| **Weaviate** | ~1B | ✅ | Hybrid out-of-the-box |
-| **PGVector** | < 100M | ✅ | Đã có PostgreSQL infrastructure |
-| **Pinecone** | ~1B | ✅ | Zero ops, startup |
+Tham số cần nhập:
+- **Collection name**: Tên collection/index để lưu (ví dụ: `rag_docs`).
+- **Persist directory**: Thư mục lưu index trên disk (với Chroma, FAISS, LanceDB).
 
 ---
 
-### Bước 5 — Process
+### Bước 5 — Chạy Indexing
 
 Sau khi cấu hình xong, nhấn nút **▶️ Process** ở cuối sidebar.
 
-![Process button](docs/screenshots/09_process_button.png)
+App chạy tuần tự 4 bước với progress bar. Kết quả mỗi bước được **cache trên disk** theo fingerprint SHA-256 — nếu chạy lại với cùng cấu hình, kết quả được tái sử dụng ngay lập tức mà không cần tính lại.
 
-App chạy tuần tự 4 bước indexing với progress bar. Nút **▶️ Process** tự động bị **disabled** trong khi chạy. Nhấn **🛑 Stop** để dừng bất cứ lúc nào. Kết quả mỗi bước được **cache trên disk** — chạy lại với cùng config sẽ reuse kết quả cũ.
+- Nhấn **🛑 Stop** để dừng bất cứ lúc nào.
+- Khi indexing xong, chuyển sang **Generation** page để bắt đầu hỏi đáp.
 
 ---
 
-### Bước 6 — Xem kết quả Indexing
+## 8. Hướng dẫn sử dụng — Generation Pipeline
 
-#### Tab "📄 Loader"
+Chuyển sang page **💬 Generation** từ sidebar.
 
-![Tab Loader](docs/screenshots/10_tab_loader.png)
+---
 
-Số document, tổng ký tự, bảng thống kê theo file, nội dung từng document.
+### Chọn Index đã build
 
-#### Tab "✂️ Chunking"
-
-![Tab Chunking](docs/screenshots/11_tab_chunking.png)
-
-Histogram phân phối chunk size, metrics min/max/mean, xem từng chunk với metadata.
-
-#### Tab "🧮 Embedding"
-
-![Tab Embedding](docs/screenshots/12_tab_embedding.png)
-
-Embedding matrix shape, cosine similarity heatmap, nearest neighbors của từng chunk.
-
-#### Tab "🗃️ Vector DB"
-
-![Tab VectorDB](docs/screenshots/13_tab_vdb.png)
-
-Thông tin collection, persist path, sparse index info.
+Ở đầu sidebar (hoặc vùng chính), chọn pipeline/index đã được build ở bước Indexing. App hiển thị danh sách tất cả index đã tạo, kèm thông tin: file nguồn, loader strategy, embedding model, vector DB.
 
 ---
 
 ### Bước 7 — Pre-retrieval *(tuỳ chọn)*
 
-Mở expander **"7️⃣ Pre-retrieval"** trong sidebar.
-
-![Pre-retrieval settings](docs/screenshots/14_preretrieval_settings.png)
+Mở expander **"🔄 Pre-retrieval"** trong sidebar.
 
 | Strategy | Cơ chế | Khi nào dùng |
 |----------|--------|-------------|
-| `none` ⭐ | Giữ nguyên query | Query đã rõ ràng |
-| `rewrite` | LLM viết lại chuẩn hơn | Query ngắn, thiếu context |
-| `expand` | Thêm từ đồng nghĩa | Corpus có nhiều thuật ngữ tương đương |
-| `step_back` | Tổng quát hóa query | Query quá cụ thể |
-| `multi_query` | Tạo N query con → merge (RRF) | Query phức tạp, nhiều khía cạnh |
-| `decompose` | Chia sub-query độc lập | Multi-hop reasoning |
-| `self_query` | Parse → metadata filter + semantic | Corpus có metadata phong phú |
-| `route` | Phân loại → chọn strategy phù hợp | Corpus đa dạng |
+| `none` ⭐ | Giữ nguyên query | Query đã rõ ràng, muốn latency thấp |
+| `rewrite` | LLM viết lại chuẩn hơn, sửa lỗi chính tả | Query ngắn, thiếu ngữ cảnh |
+| `expand` | Thêm từ đồng nghĩa và thuật ngữ liên quan | Corpus nhiều thuật ngữ tương đương |
+| `step_back` | Tổng quát hóa câu hỏi để tìm kiến thức nền | Query quá cụ thể, cần context rộng hơn |
+| `multi_query` | Tạo N biến thể query → merge kết quả (RRF) | Query phức tạp, nhiều khía cạnh |
+| `decompose` | Chia thành sub-query độc lập | Multi-hop reasoning |
+| `self_query` | Parse metadata filter từ ngôn ngữ tự nhiên | Corpus có metadata phong phú |
+| `route` | Phân loại query → chọn strategy phù hợp | Corpus đa dạng nhiều chủ đề |
 
 ---
 
 ### Bước 8 — Retrieval
 
-Mở expander **"8️⃣ Retrieval"** trong sidebar.
-
-![Retrieval settings](docs/screenshots/15_retrieval_settings.png)
+Mở expander **"⚙️ Retrieval"** trong sidebar.
 
 | Strategy | Cơ chế | Khi nào dùng |
 |----------|--------|-------------|
-| `hybrid` ⭐ | Dense + Sparse RRF | Mặc định tốt nhất khi bật sparse |
-| `dense` | Cosine similarity | Câu hỏi ngữ nghĩa |
-| `sparse` | BM25 / SPLADE | Từ khoá, tên riêng, số liệu |
-| `multi_query` | N phiên bản query → merge | Query mơ hồ |
-| `parent_document` | Retrieve child, return parent | Cần nhiều context hơn |
-| `sentence_window` | N câu xung quanh câu hit | Corpus văn xuôi |
-| `multi_hop` | Multi-step reasoning | Multi-hop Q&A |
+| `hybrid` ⭐ | Dense + Sparse → RRF fusion | **Tốt nhất khi đã bật sparse embedding** |
+| `dense` | Cosine similarity thuần | Câu hỏi ngữ nghĩa, không có từ khoá đặc biệt |
+| `sparse` | BM25 / SPLADE keyword search | Tên riêng, số liệu, thuật ngữ chính xác |
+| `multi_query` | N biến thể query → merge (RRF) | Query mơ hồ, nhiều cách hiểu |
+| `parent_document` | Retrieve child chunk → trả parent | Cần context đầy đủ hơn chunk nhỏ |
+| `sentence_window` | Mở rộng ±N câu xung quanh câu khớp | Corpus văn xuôi liên tục |
+| `multi_hop` | Retrieve → LLM → follow-up → retrieve | Câu hỏi đòi hỏi lý luận nhiều bước |
 
-**Top-K:** Số chunk trả về. Thường 10–20 trước reranking.
+Tham số:
+- **Top-K**: Số chunk trả về trước khi rerank. Thường **10–20**.
+- **Fusion method** (hybrid): `rrf` *(Reciprocal Rank Fusion — khuyến nghị)* / `weighted` / `dbsf`.
 
 ---
 
 ### Bước 9 — Post-retrieval *(tuỳ chọn)*
 
-Mở expander **"9️⃣ Post-retrieval"** trong sidebar.
+Mở expander **"⚙️ Post-retrieval"** trong sidebar.
 
-![Post-retrieval settings](docs/screenshots/16_postretrieval_settings.png)
+**Reranker:**
 
 | Reranker | Khi nào dùng |
 |----------|-------------|
 | `none` | Retrieval đã đủ tốt, muốn latency thấp |
-| `cross_encoder` ⭐ | Tốt nhất VI, không cần GPU (BAAI/bge-reranker-v2-m3) |
+| `cross_encoder` ⭐ | **Khuyến nghị VI** — `BAAI/bge-reranker-v2-m3` |
 | `cohere` | Best API quality, 100+ ngôn ngữ |
-| `llm` | Không có reranker model |
+| `llm` | Listwise reranking, không cần model riêng |
 
-**Pipeline order:** MetadataFilter → RedundancyFilter → Reranker → LLMFilter → MMRFilter → Compressor → Orderer
+**Filters & Processors** *(chạy theo thứ tự)*:
 
-**Context ordering `sandwich` ⭐:** Most relevant ở đầu và cuối, ít relevant ở giữa — giảm lost-in-the-middle hiệu quả nhất.
+| Tính năng | Tác dụng |
+|-----------|---------|
+| **Redundancy filter** | Loại chunk gần trùng lặp (cosine > ngưỡng) |
+| **MMR filter** | Cân bằng relevance và diversity |
+| **LLM filter** | LLM phân loại YES/NO từng chunk |
+| **Compression** | LLM trích đoạn liên quan từ mỗi chunk |
+
+**Context ordering:**
+- `sandwich` ⭐ — Chunk tốt nhất ở đầu và cuối, giảm *"lost-in-the-middle"*.
+- `relevance` — Giảm dần theo score.
+- `original` — Giữ nguyên thứ tự từ retriever.
+
+- **Top-N**: Số chunk giữ lại sau reranking. Thường **3–8**.
 
 ---
 
 ### Bước 10 — Prompt
 
-Mở expander **"🔟 Prompt"** trong sidebar.
-
-![Prompt settings](docs/screenshots/17_prompt_settings.png)
+Mở expander **"📝 Prompt"** trong sidebar.
 
 | Template | Output | Khi nào dùng |
 |----------|--------|-------------|
-| `citation` ⭐ | Text + [NGUỒN N] | Production, cần verify fact |
+| `citation` ⭐ | Text + `[NGUỒN N]` inline | **Production** — verify được từng fact |
 | `basic` | Plain text | Prototype nhanh |
-| `conversational` | Text + lịch sử | Chatbot, follow-up questions |
-| `structured` | JSON (claims+sources+confidence) | Downstream code cần parse |
+| `conversational` | Text + lịch sử hội thoại | Chatbot, follow-up questions |
+| `structured` | JSON: `answer + claims + sources + confidence` | Downstream code cần parse |
+
+Tuỳ chọn:
+- **Ngôn ngữ prompt**: `vi` / `en` / `both` *(tự động phát hiện)*.
+- **Max context chars**: Giới hạn tổng ký tự context đưa vào prompt (0 = không giới hạn).
+- **Rules**: Thêm instruction vào system prompt (ví dụ: "Trả lời súc tích trong 3 gạch đầu dòng").
 
 ---
 
 ### Bước 11 — Generation
 
-Mở expander **"1️⃣1️⃣ Generation"** trong sidebar.
+Mở expander **"⚙️ Generation"** trong sidebar.
 
-![Generation settings](docs/screenshots/18_generation_settings.png)
+| Tình huống | Provider | Model | Ghi chú |
+|-----------|---------|-------|---------|
+| 🏆 Cân bằng nhất | OpenAI | `gpt-4.1-mini` | $0.40/$1.60 per 1M |
+| 💰 Rẻ nhất (API) | OpenAI | `gpt-4o-mini` | $0.15/$0.60 per 1M |
+| 🇻🇳 Tiếng Việt tốt | Anthropic | `claude-sonnet-4-6` | $3/$15 per 1M |
+| 🆓 Miễn phí | Google | `gemini-2.0-flash` | Free tier có giới hạn |
+| 🔒 Offline / Privacy | Ollama | `qwen2.5:7b` | ~4.7 GB RAM |
+| 🪶 Máy yếu, offline | Ollama | `llama3.2:3b` | ~2 GB RAM |
 
-| Tình huống | Provider | Model |
-|-----------|---------|-------|
-| 🏆 Chất lượng + Tiết kiệm | OpenAI | `gpt-4.1-mini` ($0.40/$1.60 per 1M) |
-| 💰 Rẻ nhất (API) | OpenAI | `gpt-4o-mini` ($0.15/$0.60 per 1M) |
-| 🇻🇳 Tiếng Việt tốt | Anthropic | `claude-haiku-4-5` ($0.80/$4 per 1M) |
-| 🆓 Miễn phí | Google | `gemini-2.0-flash` (free tier) |
-| 🔒 Offline / Privacy | Ollama | `qwen2.5:7b` (~4.7 GB RAM) |
-| 🪶 Máy yếu, offline | Ollama | `llama3.2:3b` (~2 GB RAM) |
-
-**Temperature:** `0.0` cho RAG (deterministic, ít hallucinate). **Streaming:** Bật để xem câu trả lời xuất hiện dần.
-
----
-
-### Bước 12 — Chạy Query
-
-Chuyển sang tab **"🔎 Query Pipeline"** ở vùng chính.
-
-![Query tab](docs/screenshots/19_query_tab.png)
-
-Nhập câu hỏi và nhấn **▶️ Chạy**. App hiển thị kết quả từng bước:
-
-**Pre-retrieval** — query gốc vs. query đã biến đổi:
-
-![Pre-retrieval results](docs/screenshots/20_preretrieval_results.png)
-
-**Retrieval** — top-K chunk với similarity score:
-
-![Retrieval results](docs/screenshots/21_retrieval_results.png)
-
-**Post-retrieval** — thứ tự sau reranking so với trước:
-
-![Post-retrieval results](docs/screenshots/22_postretrieval_results.png)
-
-**Prompt** — xem đầy đủ system message và user message gửi lên LLM:
-
-![Prompt display](docs/screenshots/23_prompt_display.png)
-
-**Generation** — câu trả lời streaming với inline citations, token usage, và đoạn nguồn tương ứng:
-
-![Generation output](docs/screenshots/24_generation_output.png)
+Tham số:
+- **Temperature**: `0.0` cho RAG *(deterministic, ít hallucinate nhất)*.
+- **Max tokens**: Độ dài tối đa câu trả lời.
+- **Streaming**: Bật để xem câu trả lời xuất hiện dần từng token.
 
 ---
 
-## 8. Demo End-to-End
+### Chạy Query
 
-**Kịch bản:** Upload PDF phức tạp (có text, bảng, công thức, hình ảnh) → hỏi đáp với trích dẫn nguồn.
+Nhập câu hỏi vào ô text ở vùng chính và nhấn **▶️ Chạy**.
 
-### Cấu hình khuyến nghị:
+App hiển thị kết quả từng bước có thể expand/collapse:
 
-| Bước | Setting |
-|------|---------|
-| **File** | Upload 1–3 file PDF phức tạp |
-| **Loader** | `marker` — Markdown chất lượng cao |
-| **Chunking** | `format_aware` — nhận diện Markdown heading từ Marker output |
-| **Embedding** | OpenAI `text-embedding-3-small` + Bật BM25 sparse |
-| **Vector DB** | `chroma` — không cần config, persist tự động |
-| **Retrieval** | `hybrid` + Top-K = 15 |
-| **Post-retrieval** | `cross_encoder` + Top-N = 5 + Ordering = `sandwich` |
-| **Prompt** | `citation` |
-| **Generation** | OpenAI `gpt-4.1-mini` + Temperature = 0 + Streaming = On |
-
-### Kết quả sau khi Process:
-
-![Demo process done](docs/screenshots/25_demo_process.png)
-
-### Câu trả lời với trích dẫn nguồn:
-
-![Demo answer](docs/screenshots/26_demo_answer.png)
+- **Pre-retrieval**: Query gốc vs. query sau biến đổi.
+- **Retrieval**: Top-K chunk với similarity score và nguồn file.
+- **Post-retrieval**: Thứ tự chunk sau reranking, score thay đổi.
+- **Prompt**: System message và user message đầy đủ gửi lên LLM.
+- **Generation**: Câu trả lời streaming, inline citations, token usage, đoạn nguồn tương ứng.
 
 ---
 
-## 9. Pipeline Cache
+## 9. Demo End-to-End
+
+**Kịch bản:** Upload PDF phức tạp (có text, ảnh, bảng, công thức) → Hỏi đáp với trích dẫn nguồn chính xác.
+
+### 9.1 Cấu hình Indexing khuyến nghị
+
+| Bước | Setting | Lý do |
+|------|---------|-------|
+| **Upload** | 1–3 file PDF (học thuật / kỹ thuật) | Tài liệu có bảng, công thức, hình |
+| **Loader** | `marker` | Chuyển đổi PDF → Markdown chất lượng cao, giữ cấu trúc bảng và công thức LaTeX |
+| **Chunking** | `format_aware` | Cắt theo Markdown heading từ output của Marker — giữ nguyên ngữ nghĩa section |
+| **Chunk size** | `1000` ký tự | Cân bằng giữa context đủ rộng và precision |
+| **Chunk overlap** | `150` ký tự | ~15% overlap, tránh mất thông tin ở ranh giới |
+| **Embedding** | OpenAI `text-embedding-3-small` | Nhanh, rẻ, chất lượng tốt |
+| **Sparse** | Bật BM25 | Cải thiện recall cho từ khoá, tên riêng, số liệu |
+| **Vector DB** | `chroma` hoặc `faiss` | Không cần config server, dùng được ngay |
+
+### 9.2 Cấu hình Generation khuyến nghị
+
+| Bước | Setting | Lý do |
+|------|---------|-------|
+| **Pre-retrieval** | `rewrite` | Sửa chính tả, làm rõ đại từ — latency thấp |
+| **Retrieval** | `hybrid`, Top-K = 15 | Kết hợp dense + BM25 → recall tốt hơn |
+| **Reranker** | `cross_encoder` — `BAAI/bge-reranker-v2-m3` | Multilingual, VI tốt, không cần GPU |
+| **Top-N** | `5` | Giữ 5 chunk liên quan nhất sau rerank |
+| **Redundancy filter** | Bật (threshold 0.92) | Loại chunk gần trùng trước khi rerank |
+| **Context ordering** | `sandwich` | Giảm lost-in-the-middle |
+| **Prompt template** | `citation` | Câu trả lời có `[NGUỒN N]` để verify |
+| **Generation** | OpenAI `gpt-4.1-mini`, Temperature = 0.0 | Deterministic, ít hallucinate |
+| **Streaming** | Bật | Xem câu trả lời xuất hiện dần |
+
+### 9.3 Ví dụ câu hỏi thử nghiệm
+
+Sau khi upload PDF học thuật/kỹ thuật, thử các câu hỏi:
+
+```
+# Câu hỏi ngữ nghĩa
+"Phương pháp đề xuất trong bài có điểm gì khác biệt so với các phương pháp trước đó?"
+
+# Câu hỏi cụ thể (tốt cho hybrid retrieval)
+"Bảng 3 so sánh kết quả trên dataset nào?"
+
+# Câu hỏi yêu cầu tổng hợp nhiều phần
+"Tóm tắt các đóng góp chính của bài báo này?"
+
+# Câu hỏi về công thức / số liệu
+"Loss function được định nghĩa như thế nào trong bài?"
+```
+
+---
+
+## 10. Pipeline Cache
 
 App có hệ thống **step-level cache** để tránh chạy lại các bước tốn kém:
 
 ```
 processed_data/
   <input_hash>/
-    loader/<loader_key>/    # Cache documents đã load
-    chunking/<chunk_key>/   # Cache chunks
-    embedding/<embed_key>/  # Cache embedding vectors
-    vector_db/<vdb_key>/    # Cache metadata Vector DB
+    loader/<loader_fingerprint>/      # Documents đã parse
+    chunking/<chunk_fingerprint>/     # Chunks đã cắt
+    embedding/<embed_fingerprint>/    # Embedding vectors
+    vector_db/<vdb_fingerprint>/      # Vector DB metadata + pipeline_chain.json
 ```
 
-**Cơ chế fingerprint chain:** `step_key = SHA256(prev_key + config)`. Chỉ đổi retrieval strategy → không phải chạy lại loading/chunking/embedding. Đổi embedding model → chạy lại từ bước embedding. Thêm file mới → chạy lại tất cả.
+**Cơ chế Fingerprint Chain:**
 
-**Quản lý cache:** Mở expander **"🗄️ Pipeline Cache"** ở cuối sidebar.
+```
+input_hash    = SHA256(file_contents)
+loader_key    = SHA256(input_hash + loader_config)
+chunk_key     = SHA256(loader_key + chunking_config)
+embed_key     = SHA256(chunk_key + embedding_config)
+vdb_key       = SHA256(embed_key + vdb_config)
+```
+
+Điều này đảm bảo:
+- Chỉ đổi **retrieval strategy** → không cần chạy lại bất kỳ bước nào ở Stage 1.
+- Đổi **embedding model** → chạy lại từ bước Embedding trở đi.
+- Thêm **file mới** → chạy lại tất cả.
+- Cùng config → reuse 100%, không tốn API call.
+
+**Quản lý cache:** Mở expander **"🗄️ Pipeline Cache"** ở cuối sidebar → xem danh sách cache, xoá cache cụ thể hoặc xoá tất cả.
 
 ---
 
-## 10. config.yaml
+## 11. config.yaml
 
-File `config.yaml` chứa cấu hình mặc định cho toàn bộ pipeline khi gọi từ code (không qua UI):
+File `config.yaml` chứa cấu hình mặc định. Thay đổi tại đây sẽ được áp dụng khi app khởi động lần đầu (nếu chưa có session state), hoặc khi gọi pipeline từ code (không qua UI).
+
+Ví dụ cấu hình cho demo scenario (Section 9):
 
 ```yaml
 data:
+  input_dir: ./data
   language: both
 
-loader:
-  pdf_strategy: marker
+indexing:
+  loader:
+    pdf_strategy: marker
+    ocr_engine: none
+    extract_tables: true
+    extract_images: false
 
-chunking:
-  strategy: format_aware
-  chunk_size: 1000
-  chunk_overlap: 150
+  chunking:
+    strategy: format_aware
+    chunk_size: 1000
+    chunk_overlap: 150
+    format_type: auto
 
-embedding:
-  provider: openai
-  model_name: text-embedding-3-small
-  sparse_method: bm25
+  embedding:
+    provider: openai
+    model_name: text-embedding-3-small
+    enable_sparse: true
+    sparse_method: bm25
 
-vector_db:
-  provider: chroma
-  collection_name: rag_docs
-  persist_directory: ./storage/chroma
+  vector_db:
+    provider: chroma
+    collection_name: rag_docs
+    persist_dir: ./storage
 
 query_pipeline:
   pre_retrieval:
-    transformations: ["none"]
+    transformations: [rewrite]
+    transformation_llm: gpt-4.1-mini
+
   retrieval:
     strategy: hybrid
     top_k: 15
+    fusion_method: rrf
+
   post_retrieval:
     reranker: cross_encoder
+    cross_encoder_model: BAAI/bge-reranker-v2-m3
     top_n: 5
+    apply_redundancy: true
+    redundancy_threshold: 0.92
     context_ordering: sandwich
+
   prompt:
     template: citation
-    language: both
+    validate_citations: true
+
   generation:
     provider: openai
     model_name: gpt-4.1-mini
@@ -675,38 +821,110 @@ query_pipeline:
 
 ---
 
-## 11. Troubleshooting
+## 12. Troubleshooting
 
-**`ModuleNotFoundError: No module named 'marker'`**
+### `ModuleNotFoundError: No module named 'marker'`
+
 ```bash
 pip install marker-pdf==1.6.2
 ```
 
-**`OPENAI_API_KEY not found`**
+Marker cần tải model (~1.5 GB) lần đầu chạy — đảm bảo có kết nối internet.
 
-Kiểm tra file `.env` tồn tại và có nội dung đúng. Đảm bảo app chạy từ đúng thư mục chứa `.env`.
+---
 
-**Ollama: `Connection refused`**
+### `OPENAI_API_KEY not found` hoặc `AuthenticationError`
+
+1. Kiểm tra file `.env` tồn tại ở thư mục gốc project.
+2. Đảm bảo format đúng: `OPENAI_API_KEY=sk-proj-...` *(không có dấu nháy)*.
+3. Đảm bảo chạy `streamlit run app.py` từ đúng thư mục gốc.
+
+---
+
+### Ollama: `Connection refused` hoặc `ConnectError`
+
 ```bash
+# Khởi động Ollama server
 ollama serve
+
+# Kiểm tra các model đã có
 ollama list
+
+# Pull model nếu chưa có
 ollama pull qwen2.5:7b
 ```
 
-**Chunking quá nhiều chunk ngắn (<50 chars)**
+---
 
-Tăng `chunk_size` hoặc bật **"Bỏ qua chunk quá ngắn"**. Kiểm tra xem PDF có nhiều header/footer bị trích xuất không.
+### `faiss` import error trên macOS (Apple Silicon)
 
-**Cosine heatmap toàn màu nhạt (similarity thấp)**
+```bash
+pip uninstall faiss-cpu
+pip install faiss-cpu==1.9.0.post1 --no-cache-dir
+```
 
-Đổi sang model đa ngôn ngữ (`BAAI/bge-m3`, `embed-multilingual-v3.0`).
+Nếu vẫn lỗi, thử cài qua conda:
 
-**Câu trả lời bị hallucinate**
+```bash
+conda install -c conda-forge faiss-cpu
+```
 
-1. Kiểm tra tab Retrieval — chunk retrieved có thực sự liên quan không?
-2. Tăng Top-K và bật cross-encoder reranker
-3. Đổi prompt template sang `citation`
-4. Đặt temperature = 0.0
+---
+
+### Chunking tạo ra quá nhiều chunk ngắn (< 50 ký tự)
+
+- Tăng `chunk_size` lên 1000–1500.
+- Kiểm tra loader: PDF có nhiều header/footer thừa không? Thử dùng `marker` hoặc `docling` để output Markdown sạch hơn.
+- Bật option **"Bỏ qua chunk quá ngắn"** trong cài đặt chunking.
+
+---
+
+### Cosine similarity heatmap toàn màu nhạt (similarity thấp)
+
+Embedding model không phù hợp với ngôn ngữ trong tài liệu. Thử đổi sang:
+
+- `BAAI/bge-m3` (HuggingFace, multilingual)
+- `embed-multilingual-v3.0` (Cohere)
+- `text-embedding-3-large` (OpenAI, chất lượng cao hơn 3-small)
+
+---
+
+### Câu trả lời bị hallucinate (bịa thông tin không có trong tài liệu)
+
+1. Mở tab **Retrieval** — kiểm tra xem các chunk retrieved có thực sự liên quan không.
+2. Tăng `top_k` và bật **cross-encoder reranker**.
+3. Đổi prompt template sang `citation` — LLM phải trích dẫn `[NGUỒN N]` cho mỗi claim.
+4. Đặt `temperature = 0.0`.
+5. Thêm rule vào system prompt: `"Chỉ trả lời dựa trên các đoạn context được cung cấp. Nếu không tìm thấy thông tin, hãy nói rõ."`
+
+---
+
+### Lỗi `torch` khi cài marker-pdf trên Windows
+
+Marker cần `torch`. Cài PyTorch trước theo hướng dẫn chính thức:
+
+```bash
+# CPU only (không có GPU NVIDIA)
+pip install torch==2.5.1+cpu -f https://download.pytorch.org/whl/torch_stable.html
+
+# Sau đó cài marker
+pip install marker-pdf==1.6.2
+```
+
+---
+
+### Streamlit báo lỗi upload file quá lớn
+
+```bash
+streamlit run app.py --server.maxUploadSize 500
+```
+
+Hoặc tạo file `.streamlit/config.toml`:
+
+```toml
+[server]
+maxUploadSize = 500
+```
 
 ---
 
@@ -718,7 +936,7 @@ MIT License — xem file [LICENSE](LICENSE) để biết chi tiết.
 
 ## 🤝 Contributing
 
-Pull requests welcome! Vui lòng mở Issue trước khi làm thay đổi lớn.
+Pull requests welcome! Vui lòng mở Issue trước khi thực hiện thay đổi lớn để thảo luận hướng đi.
 
 ---
 

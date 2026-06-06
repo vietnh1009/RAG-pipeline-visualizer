@@ -164,11 +164,12 @@ class PipelineCache:
 
     def save_loader(
         self,
-        input_hash: str,
-        loader_key: str,
-        docs: list,
-        cfg: dict,
-        source_path: str = "",
+        input_hash:    str,
+        loader_key:    str,
+        docs:          list,
+        cfg:           dict,
+        source_path:   str = "",
+        input_display: str = "",
     ) -> None:
         d = self._step_dir(input_hash, "loader", loader_key)
         d.mkdir(parents=True, exist_ok=True)
@@ -177,9 +178,10 @@ class PipelineCache:
             "n_docs": len(docs),
             "n_chars": sum(len(doc.page_content) for doc in docs),
             "source_path": source_path,
-        })
-        # Lưu input meta ở root lần đầu
-        _write_input_meta(self._input_dir(input_hash), input_hash, source_path)
+        }, parent_key=input_hash)
+        # Lưu input meta — cập nhật input_display nếu có
+        _write_input_meta(self._input_dir(input_hash), input_hash, source_path, input_display)
+        _stamp_size(d)
         logger.debug("Cache SAVE loader %s", _short(loader_key))
 
     def load_loader(self, input_hash: str, loader_key: str) -> list | None:
@@ -205,6 +207,7 @@ class PipelineCache:
         chunk_key: str,
         chunks: list,
         cfg: dict,
+        loader_key: str = "",
     ) -> None:
         d = self._step_dir(input_hash, "chunking", chunk_key)
         d.mkdir(parents=True, exist_ok=True)
@@ -213,7 +216,8 @@ class PipelineCache:
             "n_chunks":    len(chunks),
             "avg_chars":   int(sum(len(c.page_content) for c in chunks) / max(len(chunks), 1)),
             "total_chars": sum(len(c.page_content) for c in chunks),
-        })
+        }, parent_key=loader_key)
+        _stamp_size(d)
         logger.debug("Cache SAVE chunking %s", _short(chunk_key))
 
     def load_chunking(self, input_hash: str, chunk_key: str) -> list | None:
@@ -239,6 +243,7 @@ class PipelineCache:
         embed_key: str,
         result: dict,
         cfg: dict,
+        chunk_key: str = "",
     ) -> None:
         """
         result = {"dense": list[list[float]], "sparse": ..., "dims": int, ...}
@@ -262,7 +267,8 @@ class PipelineCache:
             "dims":        result["dims"],
             "has_sparse":  result.get("sparse") is not None,
             "truncated":   result.get("truncated", False),
-        })
+        }, parent_key=chunk_key)
+        _stamp_size(d)
         logger.debug("Cache SAVE embedding %s", _short(embed_key))
 
     def load_embedding(self, input_hash: str, embed_key: str) -> dict | None:
@@ -303,6 +309,7 @@ class PipelineCache:
         vdb_key:    str,
         result:     dict,
         cfg:        dict,
+        embed_key:  str = "",
     ) -> None:
         """
         Lưu metadata của bước Vector DB vào pipeline cache.
@@ -323,7 +330,9 @@ class PipelineCache:
             "provider":        result["provider"],
             "collection_name": result["collection_name"],
             "n_vectors":       result["n_vectors"],
-        })
+            "persist_dir":     result.get("persist_dir", cfg.get("persist_dir", "")),
+        }, parent_key=embed_key)
+        _stamp_size(d)
         logger.debug("Cache SAVE vector_db %s", _short(vdb_key))
 
     def load_vector_db(self, input_hash: str, vdb_key: str) -> dict | None:
@@ -362,44 +371,244 @@ class PipelineCache:
 
     # ── Cache info / management ───────────────────────────────────────────
 
+
+    def list_complete_pipelines(self) -> list[dict]:
+        """
+        Liệt kê tất cả pipeline hoàn chỉnh (có đủ cả 4 bước).
+
+        Mỗi pipeline = một tổ hợp cụ thể:
+            input × loader_key × chunk_key × embed_key × vdb_key
+
+        Reconstruction algorithm:
+        1. Với mỗi input_dir, đọc tất cả key_dir của từng step.
+        2. Với mỗi vdb_key_dir, đọc parent_key → phải khớp với một embed_key_dir.
+        3. Truy ngược: embed → chunk → loader (kiểm tra parent_key chain).
+        4. Chain hợp lệ → tạo một pipeline entry.
+
+        Hỗ trợ backward compat: nếu parent_key không có (cache cũ),
+        dùng heuristic: chỉ có 1 key per step → liên kết thẳng.
+
+        Returns list[dict] — mỗi dict:
+          {
+            "pipeline_id":   str,            # vdb_key_short (unique)
+            "input_short":   str,
+            "source_path":   str,
+            "created_at":    str,            # từ vdb meta (lúc hoàn tất)
+            "total_size_mb": float,
+            "loader":  {"key": str, "cfg": dict, "stats": dict},
+            "chunking":{"key": str, "cfg": dict, "stats": dict},
+            "embedding":{"key": str, "cfg": dict, "stats": dict},
+            "vector_db":{"key": str, "cfg": dict, "stats": dict},
+          }
+        """
+        pipelines = []
+        if not self.base.exists():
+            return pipelines
+
+        for input_dir in sorted(self.base.iterdir()):
+            if not input_dir.is_dir() or input_dir.name.startswith("."):
+                continue
+
+            meta_f = input_dir / "input_meta.json"
+            input_meta = json.loads(meta_f.read_text("utf-8")) if meta_f.exists() else {}
+            source_path = input_meta.get("source_path", "")
+
+            # Collect all key dirs per step
+            def _step_keys(step: str) -> list[tuple[str, dict]]:
+                """Returns list of (key_short, meta_dict) for a step."""
+                sdir = input_dir / step
+                if not sdir.exists():
+                    return []
+                result = []
+                for kd in sdir.iterdir():
+                    if kd.is_dir():
+                        m = _read_meta(kd)
+                        result.append((kd.name, m))
+                return result
+
+            vdb_keys    = _step_keys("vector_db")
+            embed_keys  = _step_keys("embedding")
+            chunk_keys  = _step_keys("chunking")
+            loader_keys = _step_keys("loader")
+
+            if not (vdb_keys and embed_keys and chunk_keys and loader_keys):
+                continue
+
+            # Build lookup dicts: key_short → meta
+            embed_by_key  = {k: m for k, m in embed_keys}
+            chunk_by_key  = {k: m for k, m in chunk_keys}
+            loader_by_key = {k: m for k, m in loader_keys}
+
+            for vdb_ks, vdb_m in vdb_keys:
+                # Priority 1: pipeline_chain.json manifest (written by app after indexing)
+                chain_file = input_dir / "vector_db" / vdb_ks / "pipeline_chain.json"
+                if chain_file.exists():
+                    try:
+                        chain = json.loads(chain_file.read_text("utf-8"))
+                        _lks = chain.get("loader_key", "")
+                        _cks = chain.get("chunk_key",  "")
+                        _eks = chain.get("embed_key",  "")
+                        if _lks in loader_by_key and _cks in chunk_by_key and _eks in embed_by_key:
+                            lm = loader_by_key[_lks]; cm = chunk_by_key[_cks]; em = embed_by_key[_eks]
+                            total_size = sum([lm.get("size_mb",0), cm.get("size_mb",0),
+                                             em.get("size_mb",0), vdb_m.get("size_mb",0)])
+                            sp  = chain.get("source_path", input_meta.get("source_path", ""))
+                            cra = chain.get("created_at",  vdb_m.get("saved_at", ""))
+                            _id = chain.get("input_display", "") or sp
+                            pipelines.append({
+                                "pipeline_id":   vdb_ks,
+                                "input_short":   input_dir.name,
+                                "source_path":   sp,
+                                "input_display": _id,
+                                "created_at":    cra,
+                                "total_size_mb": round(total_size, 4),
+                                "loader":   {"key": _lks, "cfg": lm.get("cfg",{}), "stats": lm.get("stats",{})},
+                                "chunking": {"key": _cks, "cfg": cm.get("cfg",{}), "stats": cm.get("stats",{})},
+                                "embedding":{"key": _eks, "cfg": em.get("cfg",{}), "stats": em.get("stats",{})},
+                                "vector_db":{"key": vdb_ks,"cfg": vdb_m.get("cfg",{}),"stats": vdb_m.get("stats",{})},
+                            })
+                            continue
+                    except Exception:
+                        pass  # fall through to heuristics
+
+                # Priority 2: parent_key chain (new format)
+                vdb_parent = vdb_m.get("parent_key", "")
+                embed_ks   = None
+
+                if vdb_parent:
+                    embed_ks_candidate = vdb_parent[:12]
+                    if embed_ks_candidate in embed_by_key:
+                        embed_ks = embed_ks_candidate
+                else:
+                    # Backward compat: no parent_key → if only 1 embed key, use it
+                    if len(embed_by_key) == 1:
+                        embed_ks = next(iter(embed_by_key))
+
+                if embed_ks is None:
+                    continue
+
+                embed_m = embed_by_key[embed_ks]
+
+                # Step 2: find chunking parent
+                embed_parent = embed_m.get("parent_key", "")
+                chunk_ks     = None
+
+                if embed_parent:
+                    chunk_ks_candidate = embed_parent[:12]
+                    if chunk_ks_candidate in chunk_by_key:
+                        chunk_ks = chunk_ks_candidate
+                else:
+                    if len(chunk_by_key) == 1:
+                        chunk_ks = next(iter(chunk_by_key))
+
+                if chunk_ks is None:
+                    continue
+
+                chunk_m = chunk_by_key[chunk_ks]
+
+                # Step 3: find loader parent
+                chunk_parent = chunk_m.get("parent_key", "")
+                loader_ks    = None
+
+                if chunk_parent:
+                    loader_ks_candidate = chunk_parent[:12]
+                    if loader_ks_candidate in loader_by_key:
+                        loader_ks = loader_ks_candidate
+                else:
+                    if len(loader_by_key) == 1:
+                        loader_ks = next(iter(loader_by_key))
+
+                if loader_ks is None:
+                    continue
+
+                loader_m = loader_by_key[loader_ks]
+
+                # Compute total size for this pipeline
+                total_size = sum([
+                    loader_m.get("size_mb", 0),
+                    chunk_m.get("size_mb", 0),
+                    embed_m.get("size_mb", 0),
+                    vdb_m.get("size_mb", 0),
+                ])
+
+                pipelines.append({
+                    "pipeline_id":   vdb_ks,
+                    "input_short":   input_dir.name,
+                    "source_path":   source_path,
+                    "input_display": input_meta.get("input_display", "") or source_path,
+                    "created_at":    vdb_m.get("saved_at", input_meta.get("created_at", "")),
+                    "total_size_mb": round(total_size, 4),
+                    "loader":        {"key": loader_ks, "cfg": loader_m.get("cfg", {}), "stats": loader_m.get("stats", {})},
+                    "chunking":      {"key": chunk_ks,  "cfg": chunk_m.get("cfg",  {}), "stats": chunk_m.get("stats",  {})},
+                    "embedding":     {"key": embed_ks,  "cfg": embed_m.get("cfg",  {}), "stats": embed_m.get("stats",  {})},
+                    "vector_db":     {"key": vdb_ks,    "cfg": vdb_m.get("cfg",   {}), "stats": vdb_m.get("stats",   {})},
+                })
+
+        # Sort newest first
+        pipelines.sort(key=lambda p: p["created_at"], reverse=True)
+        return pipelines
+
     def list_entries(self) -> list[dict]:
         """
-        Trả về list các entry trong cache, mỗi entry là dict với:
-          input_short, input_hash (đọc từ meta), source_path,
-          steps: {step_name: [list of cached configs]},
-          total_size_mb, created_at
+        Trả về list các entry trong cache.
+
+        Hiệu năng:
+        - Chỉ đọc meta.json (tiny JSON files) — KHÔNG scan file content.
+        - Không gọi _dir_size_mb() per entry (tốn O(n_files) stat calls).
+        - Size được lấy từ stats đã lưu trong meta.json lúc save.
+        - O(n_entries × n_steps × n_keys) — thuần đọc JSON, rất nhanh.
         """
         entries = []
         if not self.base.exists():
             return entries
         for input_dir in sorted(self.base.iterdir()):
-            if not input_dir.is_dir():
+            if not input_dir.is_dir() or input_dir.name.startswith("."):
                 continue
             meta_f = input_dir / "input_meta.json"
-            meta   = json.loads(meta_f.read_text("utf-8")) if meta_f.exists() else {}
+            # Đọc meta nếu có, không skip nếu thiếu (backward compat)
+            meta = json.loads(meta_f.read_text("utf-8")) if meta_f.exists() else {}
             steps: dict[str, list[dict]] = {}
+            total_size_mb = 0.0
             for step in STEP_NAMES:
                 step_dir = input_dir / step
                 if not step_dir.exists():
                     continue
                 steps[step] = []
                 for key_dir in sorted(step_dir.iterdir()):
-                    if key_dir.is_dir():
-                        m = _read_meta(key_dir)
-                        steps[step].append({
-                            "key_short":  key_dir.name,
-                            "cfg":        m.get("cfg", {}),
-                            "stats":      m.get("stats", {}),
-                            "saved_at":   m.get("saved_at", ""),
-                            "size_mb":    _dir_size_mb(key_dir),
-                        })
+                    if not key_dir.is_dir():
+                        continue
+                    m        = _read_meta(key_dir)
+                    size_mb  = m.get("size_mb", 0.0)     # lưu lúc save
+                    total_size_mb += size_mb
+                    steps[step].append({
+                        "key_short": key_dir.name,
+                        "cfg":       m.get("cfg", {}),
+                        "stats":     m.get("stats", {}),
+                        "saved_at":  m.get("saved_at", ""),
+                        "size_mb":   size_mb,
+                    })
+            # input_display: ưu tiên input_meta → pipeline_chain → fallback basename
+            _id = meta.get("input_display", "")
+            if not _id or _id == meta.get("source_path", ""):
+                # Thử đọc từ bất kỳ pipeline_chain.json nào trong input_dir
+                for _cf in input_dir.rglob("pipeline_chain.json"):
+                    try:
+                        _chain = json.loads(_cf.read_text("utf-8"))
+                        _d = _chain.get("input_display", "")
+                        _sp = _chain.get("source_path", "")
+                        if _d and _d != _sp:
+                            _id = _d
+                            break
+                    except Exception:
+                        pass
             entries.append({
-                "input_short":  input_dir.name,
-                "full_hash":    meta.get("full_hash", ""),
-                "source_path":  meta.get("source_path", ""),
-                "created_at":   meta.get("created_at", ""),
-                "steps":        steps,
-                "total_size_mb": _dir_size_mb(input_dir),
+                "input_short":   input_dir.name,
+                "full_hash":     meta.get("full_hash", ""),
+                "source_path":   meta.get("source_path", ""),
+                "input_display": _id,
+                "created_at":    meta.get("created_at", ""),
+                "steps":         steps,
+                "total_size_mb": round(total_size_mb, 4),
             })
         return entries
 
@@ -460,16 +669,38 @@ def _atomic_pickle(obj: Any, dest: Path) -> None:
     tmp.replace(dest)
 
 
-def _write_meta(d: Path, step: str, cfg: dict, stats: dict) -> None:
+def _write_meta(d: Path, step: str, cfg: dict, stats: dict, parent_key: str = "") -> None:
     meta = {
-        "step":     step,
-        "cfg":      cfg,
-        "stats":    stats,
-        "saved_at": datetime.now().isoformat(timespec="seconds"),
+        "step":       step,
+        "cfg":        cfg,
+        "stats":      stats,
+        "saved_at":   datetime.now().isoformat(timespec="seconds"),
+        "parent_key": parent_key,
     }
-    (d / "meta.json").write_text(
-        json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
+    data = json.dumps(meta, ensure_ascii=False, indent=2)
+    dest = d / "meta.json"
+    tmp  = dest.with_suffix(".tmp")
+    tmp.write_text(data, encoding="utf-8")
+    tmp.replace(dest)   # atomic rename — safe on crash
+
+
+def _stamp_size(d: Path) -> None:
+    """Cập nhật size_mb vào meta.json sau khi tất cả files đã được ghi.
+    Gọi sau khi save_* hoàn tất — chỉ đọc meta rồi ghi lại với size thêm vào.
+    """
+    meta_f = d / "meta.json"
+    if not meta_f.exists():
+        return
+    try:
+        meta = json.loads(meta_f.read_text("utf-8"))
+        meta["size_mb"] = round(
+            sum(f.stat().st_size for f in d.rglob("*") if f.is_file()) / (1024**2), 4
+        )
+        tmp = meta_f.with_suffix(".tmp")
+        tmp.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
+        tmp.replace(meta_f)
+    except Exception:
+        pass   # non-critical — list_entries sẽ dùng 0.0 nếu không có
 
 
 def _read_meta(d: Path) -> dict:
@@ -482,18 +713,31 @@ def _read_meta(d: Path) -> dict:
         return {}
 
 
-def _write_input_meta(input_dir: Path, full_hash: str, source_path: str) -> None:
+def _write_input_meta(
+    input_dir:     Path,
+    full_hash:     str,
+    source_path:   str,
+    input_display: str = "",
+) -> None:
     f = input_dir / "input_meta.json"
-    if f.exists():
-        return   # đã có, không overwrite
     input_dir.mkdir(parents=True, exist_ok=True)
+    # Merge với dữ liệu cũ nếu đã tồn tại (giữ created_at ban đầu)
+    existing: dict = {}
+    if f.exists():
+        try:
+            existing = json.loads(f.read_text("utf-8"))
+        except Exception:
+            existing = {}
     meta = {
-        "full_hash":   full_hash,
-        "short_hash":  full_hash[:KEY_LEN],
-        "source_path": source_path,
-        "created_at":  datetime.now().isoformat(timespec="seconds"),
+        "full_hash":     full_hash,
+        "short_hash":    full_hash[:KEY_LEN],
+        "source_path":   source_path,
+        "input_display": input_display or existing.get("input_display", "") or source_path,
+        "created_at":    existing.get("created_at", datetime.now().isoformat(timespec="seconds")),
     }
-    f.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
+    tmp = input_dir / "input_meta.tmp"
+    tmp.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
+    tmp.replace(f)
 
 
 def _dir_size_mb(d: Path) -> float:

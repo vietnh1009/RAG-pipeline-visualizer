@@ -5,8 +5,9 @@ FAISS local vector store (Meta AI).
 
 Runs entirely in-process — no server, no API key, no network.
 The index is persisted to two files on disk:
-    <persist_dir>/<collection_name>/index.faiss
-    <persist_dir>/<collection_name>/index.pkl
+    <persist_dir>/index.faiss
+    <persist_dir>/index.pkl
+(persist_dir already includes collection name: ./storage/faiss_{collection_name})
 
 Re-index prevention
 -------------------
@@ -60,7 +61,7 @@ class FAISSVectorStore(BaseVectorStore):
         from langchain_community.vectorstores import FAISS
 
         lc_embedder = self._langchain_embedder(embedder)
-        idx_dir     = Path(self.persist_dir) / self.collection_name
+        idx_dir     = Path(self.persist_dir)   # persist_dir already is the index dir
         fp_path     = str(idx_dir / "fingerprint.json")
 
         # Load existing index if corpus is unchanged

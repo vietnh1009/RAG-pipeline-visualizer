@@ -1,6 +1,6 @@
 # ╔══════════════════════════════════════════════════════════════════════╗
-# ║  RAG Pipeline Visualizer — requirements.txt                         ║
-# ║  Python 3.11+ khuyến nghị                                           ║
+# ║  RefinedRAG — requirements.txt                                       ║
+# ║  Python 3.11 khuyến nghị (tối thiểu 3.10)                           ║
 # ║                                                                      ║
 # ║  Nhóm (A) = bắt buộc để chạy app                                    ║
 # ║  Nhóm (B) = cài thêm khi cần tính năng tương ứng                    ║
@@ -12,7 +12,7 @@
 streamlit==1.45.1
 python-dotenv==1.0.1
 
-# LangChain
+# LangChain core
 langchain-core==0.3.63
 langchain-text-splitters==0.3.8
 langchain-community==0.3.24
@@ -24,7 +24,7 @@ pandas==2.2.3
 tabulate==0.9.0
 
 # ─────────────────────────────────────────────────────
-# (A) LOADER — tối thiểu pypdf + pymupdf + pdfplumber
+# (A) LOADER — Bắt buộc: pypdf + pymupdf + pdfplumber
 # ─────────────────────────────────────────────────────
 pypdf==5.1.0
 pymupdf==1.24.14
@@ -57,28 +57,35 @@ faiss-cpu==1.9.0.post1
 # (B) TÙY CHỌN — Loader nâng cao
 # ─────────────────────────────────────────────────────
 
-# Marker PDF — Markdown chất lượng cao, bảng & công thức (strategy: marker)
+# Marker PDF — PDF → Markdown chất lượng cao, hỗ trợ bảng, công thức LaTeX
+# Khuyến nghị cho PDF phức tạp (học thuật, kỹ thuật)
+# pip install marker-pdf==1.6.2
 # marker-pdf==1.6.2
 
-# Docling — IBM parser, Markdown output xuất sắc (strategy: docling)
+# Docling — IBM Research parser, Markdown output xuất sắc
+# pip install docling==2.28.0
 # docling==2.28.0
 
-# Unstructured — OCR + bảng + hình (strategy: unstructured)
+# Unstructured — OCR + bảng + hình ảnh, tốt nhất cho PDF scan
+# pip install 'unstructured[pdf]==0.16.12'
 # unstructured[pdf]==0.16.12
 
 # ─────────────────────────────────────────────────────
 # (B) TÙY CHỌN — Embedding providers khác
 # ─────────────────────────────────────────────────────
 
-# Cohere (embed-multilingual-v3.0)
+# Cohere — embed-multilingual-v3.0, tốt cho tiếng Việt
+# pip install cohere==5.13.12 langchain-cohere==0.4.3
 # cohere==5.13.12
 # langchain-cohere==0.4.3
 
 # Google Gemini
+# pip install google-generativeai==0.8.3 langchain-google-genai==2.0.11
 # google-generativeai==0.8.3
 # langchain-google-genai==2.0.11
 
-# Ollama (local)
+# Ollama — local embedding
+# pip install ollama==0.4.7 langchain-ollama==0.2.3
 # ollama==0.4.7
 # langchain-ollama==0.2.3
 
@@ -86,42 +93,49 @@ faiss-cpu==1.9.0.post1
 # (B) TÙY CHỌN — Vector DB khác
 # ─────────────────────────────────────────────────────
 
-# Qdrant (production, filtering phức tạp)
+# Qdrant — production, filtering phức tạp (ACORN)
+# pip install qdrant-client==1.13.3 langchain-qdrant==0.2.0
 # qdrant-client==1.13.3
 # langchain-qdrant==0.2.0
 
-# LanceDB (embedded, không cần server)
+# LanceDB — embedded, columnar, không cần server
+# pip install lancedb==0.17.0
 # lancedb==0.17.0
 
-# Weaviate (hybrid out-of-the-box)
+# Weaviate — hybrid search out-of-the-box
+# pip install weaviate-client==4.10.4 langchain-weaviate==0.0.3
 # weaviate-client==4.10.4
 # langchain-weaviate==0.0.3
 
-# PGVector (PostgreSQL)
+# PGVector — PostgreSQL extension
+# pip install psycopg==3.2.4 langchain-postgres==0.0.13
 # psycopg[binary]==3.2.4
 # langchain-postgres==0.0.13
 
-# Pinecone (managed cloud)
-# pinecone-client==5.0.1
+# Pinecone — managed cloud
+# pip install pinecone==5.0.1 langchain-pinecone==0.2.0
+# pinecone==5.0.1
 # langchain-pinecone==0.2.0
 
 # ─────────────────────────────────────────────────────
-# (B) TÙY CHỌN — Generation providers khác
+# (B) TÙY CHỌN — Generation (LLM) providers khác
 # ─────────────────────────────────────────────────────
 
-# Anthropic (Claude)
+# Anthropic Claude
+# pip install anthropic==0.43.0
 # anthropic==0.43.0
 
-# Google Gemini — đã có google-generativeai
+# Google Gemini — đã khai báo ở phần embedding nếu cần
 
-# Ollama local — đã có ollama
+# Ollama — đã khai báo ở phần embedding nếu cần
 
-# Cohere — đã có cohere
+# Cohere Command-R — đã khai báo ở phần embedding nếu cần
 
 # ─────────────────────────────────────────────────────
-# (B) TÙY CHỌN — Sparse embedding (Hybrid retrieval)
+# (B) TÙY CHỌN — Sparse / Hybrid retrieval nâng cao
 # ─────────────────────────────────────────────────────
 
-# SPLADE sparse neural (tốt hơn BM25, cần ~500MB model)
+# SPLADE sparse neural embedding (tốt hơn BM25, cần ~500 MB model, GPU khuyến nghị)
+# pip install transformers==4.47.1 torch==2.5.1
 # transformers==4.47.1
 # torch==2.5.1

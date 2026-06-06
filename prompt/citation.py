@@ -71,13 +71,17 @@ class CitationPromptBuilder(BasePromptBuilder):
         context = self._format_context(docs)
         vi      = (self.language == "vi")
 
-        system_text = self._SYSTEM_VI if vi else self._SYSTEM_EN
+        # System instruction always in EN — LLM follows EN instructions more reliably
+        # VI/EN setting only affects the user message template (question/context format)
+        system_text = self._SYSTEM_EN
         user_text   = (self._USER_VI if vi else self._USER_EN).format(
             context=context, query=query
         )
 
         if self.system_instruction:
-            system_text = self.system_instruction.strip() + "\n\n" + system_text
+            # Nếu đã có system_instruction (domain role + rules), bỏ base text
+            # để tránh "You are a precise research assistant" xuất hiện lại
+            system_text = self.system_instruction.strip()
 
         messages = [
             {"role": "system", "content": system_text},
