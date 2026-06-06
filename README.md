@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <b>RAG-pipeline-visualizer</b> là ứng dụng Streamlit giúp bạn xây dựng, cấu hình và <b>trực quan hóa từng bước</b> trong pipeline RAG (Retrieval-Augmented Generation) — từ bước load tài liệu PDF đến bước sinh câu trả lời từ LLM.
+  <b>RAG-pipeline-visualizer</b> là ứng dụng giúp bạn xây dựng, cấu hình và <b>trực quan hóa từng bước</b> trong pipeline RAG (Retrieval-Augmented Generation) - từ bước load tài liệu PDF đến bước sinh câu trả lời từ LLM.
 </p>
 
 ---
@@ -22,7 +22,7 @@
   <i>▶️ Generation Pipeline — Retrieve · Rerank · Prompt · Generate</i>
 </p>
 
-> **Mục tiêu:** Cho phép người dùng thử nghiệm và quan sát tác động của từng lựa chọn cấu hình (chunking strategy, embedding model, vector DB, retrieval strategy, ...) đến chất lượng câu trả lời cuối cùng — không cần viết một dòng code.
+> **Mục tiêu:** Cho phép người dùng thử nghiệm và quan sát tác động của từng lựa chọn cấu hình (chunking strategy, embedding model, vector DB, retrieval strategy, ...) đến chất lượng câu trả lời cuối cùng.
 
 ---
 
@@ -198,7 +198,7 @@ RAG-pipeline-visualizer/
 ### 4.1 — Clone repository
 
 ```bash
-git clone https://github.com/<your-username>/RAG-pipeline-visualizer.git
+git clone https://github.com/vietnh1009/RAG-pipeline-visualizer.git
 cd RAG-pipeline-visualizer
 ```
 
