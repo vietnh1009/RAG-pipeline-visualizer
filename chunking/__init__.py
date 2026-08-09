@@ -1,24 +1,18 @@
 """
 chunking/
 =========
-Document chunking package for the RAG indexing pipeline.
+Cắt tài liệu thành chunk cho pipeline indexing.
 
-Public API
-----------
-    from chunking import get_chunker
-    from chunking import deduplicate_chunks
+API công khai
+-------------
+    from chunking import get_chunker, deduplicate_chunks
 
     chunker = get_chunker("recursive", chunk_size=500, chunk_overlap=100)
     chunks  = chunker.split(docs)
+    chunks  = deduplicate_chunks(chunks, method="minhash")
 
-    chunks = deduplicate_chunks(chunks, method="minhash")
-
-Individual chunkers can also be imported directly:
-
-    from chunking.recursive     import RecursiveChunker
-    from chunking.format_aware  import FormatAwareChunker
-    from chunking.hierarchical  import HierarchicalChunker
-    from chunking.contextual    import ContextualChunker
+Cũng có thể import thẳng từng chunker, ví dụ
+``from chunking.hierarchical import HierarchicalChunker``.
 """
 
 from chunking.factory       import get_chunker, chunk_documents_from_config

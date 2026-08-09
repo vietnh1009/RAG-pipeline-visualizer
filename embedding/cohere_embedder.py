@@ -1,24 +1,22 @@
 """
 embedding/cohere_embedder.py
 =============================
-Cohere Embed models.
+Các model Cohere Embed.
 
-Models (May 2025)
------------------
-  embed-multilingual-v3.0   1024-dim  108 languages  $0.10/1M  ⭐⭐⭐⭐ VI
-  embed-english-v3.0        1024-dim  English only   $0.10/1M
-  embed-v4.0                1536-dim  128K ctx (!)   $0.10/1M  image support
+Model (05/2025)
+---------------
+  embed-multilingual-v3.0  1024 chiều  108 ngôn ngữ  $0.10/1M  ⭐⭐⭐⭐ tiếng Việt
+  embed-english-v3.0       1024 chiều  chỉ tiếng Anh $0.10/1M
+  embed-v4.0               1536 chiều  context 128K  $0.10/1M  hỗ trợ ảnh
 
-Asymmetric embedding
---------------------
-Cohere requires different ``input_type`` for documents vs queries.
-This MUST be consistent between index time and query time.
-  "search_document"  → use when embedding corpus chunks
-  "search_query"     → use when embedding user queries
+Embedding bất đối xứng: Cohere đòi ``input_type`` khác nhau cho tài liệu và
+query, và giá trị này PHẢI thống nhất giữa lúc index và lúc truy vấn.
+  "search_document" → khi embed chunk của corpus
+  "search_query"    → khi embed câu hỏi người dùng
 
-Vietnamese quality: ⭐⭐⭐⭐ — one of the best API options.
+Chất lượng tiếng Việt: ⭐⭐⭐⭐ — thuộc nhóm tốt nhất trong các lựa chọn qua API.
 
-Env var: COHERE_API_KEY
+Biến môi trường: COHERE_API_KEY
 """
 
 from __future__ import annotations
@@ -30,10 +28,12 @@ from embedding.base import BaseEmbedder
 
 class CohereEmbedder(BaseEmbedder):
     """
-    Parameters
-    ----------
-    model_name  : Cohere embedding model identifier.
-    input_type  : "search_document" for corpus | "search_query" for queries.
+    Embedder dùng Cohere.
+
+    Tham số
+    -------
+    model_name : Tên model embedding của Cohere.
+    input_type : "search_document" cho corpus | "search_query" cho câu hỏi.
     """
 
     def __init__(

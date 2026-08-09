@@ -276,7 +276,7 @@ def render_loader_settings() -> dict:
         else:
             st.error("❌ Java không hoạt động. Cần Java 11+.")
 
-        # Only show install hint if package is actually missing
+        # Chỉ gợi ý cài đặt khi gói thật sự chưa có
         if not _is_pdf_strategy_installed("opendataloader"):
             st.caption("`pip install opendataloader-pdf`")
 
@@ -318,7 +318,7 @@ step=1,
                 )
             st.session_state["_odl_hybrid_port"] = int(_odl_port)
 
-            # Check if server is already running
+            # Xem server đã chạy sẵn chưa
             _srv_running = _check_odl_server_running(int(_odl_port))
 
             if _srv_running:

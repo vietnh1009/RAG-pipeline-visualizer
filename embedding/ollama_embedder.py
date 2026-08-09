@@ -1,23 +1,19 @@
 """
 embedding/ollama_embedder.py
 =============================
-Embedding via a locally running Ollama server.
+Embedding qua server Ollama chạy cục bộ.
 
-Ideal for:
-- Privacy-sensitive data (fully local, no API calls).
-- Development / testing without API keys.
-- Edge deployments with a GPU.
+Hợp với: dữ liệu nhạy cảm cần chạy hoàn toàn nội bộ, phát triển / kiểm thử
+không có API key, và triển khai biên có GPU.
 
-Pull a model first:
-    ollama pull nomic-embed-text
-    ollama pull bge-m3
+Phải pull model trước: ``ollama pull bge-m3``.
 
-Popular models
+Model phổ biến
 --------------
-  nomic-embed-text      768-dim   Fast, good English
-  mxbai-embed-large     1024-dim  Strong general-purpose
-  bge-m3                1024-dim  Multilingual (best for Vietnamese)
-  snowflake-arctic-embed  —       Strong English retrieval
+  nomic-embed-text        768 chiều   nhanh, tốt với tiếng Anh
+  mxbai-embed-large      1024 chiều   mạnh, dùng chung nhiều việc
+  bge-m3                 1024 chiều   đa ngôn ngữ, tốt nhất cho tiếng Việt
+  snowflake-arctic-embed      —       truy hồi tiếng Anh mạnh
 """
 
 from __future__ import annotations
@@ -29,10 +25,12 @@ from embedding.base import BaseEmbedder
 
 class OllamaEmbedder(BaseEmbedder):
     """
-    Parameters
-    ----------
-    model_name : Ollama model name (must already be pulled).
-    base_url   : Ollama server URL (default: http://localhost:11434).
+    Embedder dùng Ollama.
+
+    Tham số
+    -------
+    model_name : Tên model Ollama, phải pull sẵn.
+    base_url   : URL server Ollama, mặc định http://localhost:11434.
     """
 
     def __init__(

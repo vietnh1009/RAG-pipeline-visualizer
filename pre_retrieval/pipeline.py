@@ -101,7 +101,7 @@ class PreRetrievalPipeline:
         return merged
 
     # ------------------------------------------------------------------
-    # Builder
+    # Hàm dựng transformer
     # ------------------------------------------------------------------
 
     def _build(self, name: str) -> BaseTransformer:

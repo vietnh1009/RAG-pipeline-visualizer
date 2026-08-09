@@ -138,7 +138,7 @@ def render_pipeline_suggestions(suggestions: list[dict]):
                           r'font-family:var(--font-mono);">\1</code>', text)
             return text
 
-        # ── Shared style constants ────────────────────────────────────────────
+        # ── Hằng số style dùng chung ──────────────────────────────────────────
         _B = (
             "display:inline-block;padding:4px 10px;border-radius:6px;"
             "font-size:0.78rem;font-family:var(--font-mono);font-weight:500;"
@@ -242,7 +242,7 @@ def render_pipeline_suggestions(suggestions: list[dict]):
             f'<div style="font-weight:600;font-size:0.92rem;line-height:1.45;'
             f'color:var(--color-text-primary);margin-bottom:10px;">{sug["title"]}</div>'
 
-            # tech badges — Indexing stage only (Stage 2 steps not shown here)
+            # nhãn kỹ thuật — chỉ Stage 1 Indexing, các bước Stage 2 không hiện ở đây
             f'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px;">'
             f'{s_loader}{s_chunker}{s_emb}{s_vdb}</div>'
 
@@ -626,6 +626,6 @@ def render_query_pipeline_results(
     st.session_state["_query_history"] = _hist[-20:]  # giữ tối đa 10 lượt
 
 
-# ─── Helper: render text+images mixed content ─────────────────────────────────
+# ─── Hàm phụ trợ: render nội dung trộn text và ảnh ────────────────────────────
 
 

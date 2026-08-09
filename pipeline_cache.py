@@ -50,16 +50,16 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# ── Constants ─────────────────────────────────────────────────────────────────
-KEY_LEN       = 12        # hex chars to use from SHA256 (12 = 48 bits, ~281T combos)
-CHUNK_SIZE    = 65_536    # bytes per read when hashing large files
-STEP_NAMES    = ("loader", "chunking", "embedding", "vector_db")   # ordered — used for invalidation
+# ── Hằng số ───────────────────────────────────────────────────────────────────
+KEY_LEN       = 12        # số ký tự hex lấy từ SHA256 (12 = 48 bit, ~281 nghìn tỷ tổ hợp)
+CHUNK_SIZE    = 65_536    # số byte mỗi lần đọc khi hash file lớn
+STEP_NAMES    = ("loader", "chunking", "embedding", "vector_db")   # có thứ tự — dùng để vô hiệu hoá cache
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# ── Hàm phụ trợ ───────────────────────────────────────────────────────────────
 
 def _sha256_file(path: Path) -> str:
-    """SHA256 of a single file, streamed (memory-efficient for large files)."""
+    """SHA256 của một file, đọc theo luồng để không tốn RAM với file lớn."""
     h = hashlib.sha256()
     with open(path, "rb") as f:
         while chunk := f.read(CHUNK_SIZE):
@@ -72,7 +72,7 @@ def _sha256_str(text: str) -> str:
 
 
 def _canonical_json(obj: Any) -> str:
-    """Deterministic JSON — sorted keys, no whitespace, None→null."""
+    """JSON tất định — key đã sắp xếp, không khoảng trắng, None→null."""
     def _clean(o: Any) -> Any:
         if isinstance(o, dict):
             return {str(k): _clean(v) for k, v in sorted(o.items())}
@@ -82,7 +82,7 @@ def _canonical_json(obj: Any) -> str:
             return str(o)
         if o is None or isinstance(o, (bool, int, float, str)):
             return o
-        return str(o)   # fallback — e.g. Enum, custom types
+        return str(o)   # phương án cuối — Enum, kiểu tự định nghĩa…
     return json.dumps(_clean(obj), ensure_ascii=False, separators=(",", ":"))
 
 
@@ -90,13 +90,14 @@ def _short(full_hash: str) -> str:
     return full_hash[:KEY_LEN]
 
 
-# ── Main class ────────────────────────────────────────────────────────────────
+# ── Lớp chính ─────────────────────────────────────────────────────────────────
 
 class PipelineCache:
     """
-    Disk-backed cache for RAG pipeline steps.
+    Cache trên đĩa cho từng bước của pipeline RAG.
 
-    Thread-safe for reads; writes use atomic rename to avoid partial files.
+    An toàn khi đọc từ nhiều luồng; khi ghi dùng đổi tên nguyên tử để không bao
+    giờ để lại file dở dang.
     """
 
     def __init__(self, base_dir: str | Path = "processed_data"):
@@ -369,7 +370,7 @@ class PipelineCache:
             shutil.rmtree(d, ignore_errors=True)
             return None
 
-    # ── Cache info / management ───────────────────────────────────────────
+    # ── Thông tin và quản lý cache ────────────────────────────────────────
 
 
     def list_complete_pipelines(self) -> list[dict]:
@@ -480,7 +481,7 @@ class PipelineCache:
                     if embed_ks_candidate in embed_by_key:
                         embed_ks = embed_ks_candidate
                 else:
-                    # Backward compat: no parent_key → if only 1 embed key, use it
+                    # Tương thích ngược: không có parent_key → chỉ có đúng 1 embed key thì lấy luôn
                     if len(embed_by_key) == 1:
                         embed_ks = next(iter(embed_by_key))
 
@@ -489,7 +490,7 @@ class PipelineCache:
 
                 embed_m = embed_by_key[embed_ks]
 
-                # Step 2: find chunking parent
+                # Bước 2: tìm chunking cha
                 embed_parent = embed_m.get("parent_key", "")
                 chunk_ks     = None
 
@@ -506,7 +507,7 @@ class PipelineCache:
 
                 chunk_m = chunk_by_key[chunk_ks]
 
-                # Step 3: find loader parent
+                # Bước 3: tìm loader cha
                 chunk_parent = chunk_m.get("parent_key", "")
                 loader_ks    = None
 
@@ -523,7 +524,7 @@ class PipelineCache:
 
                 loader_m = loader_by_key[loader_ks]
 
-                # Compute total size for this pipeline
+                # Tính tổng dung lượng của pipeline này
                 total_size = sum([
                     loader_m.get("size_mb", 0),
                     chunk_m.get("size_mb", 0),
@@ -647,7 +648,7 @@ class PipelineCache:
         return removed
 
 
-# ── Private helpers ───────────────────────────────────────────────────────────
+# ── Hàm phụ trợ nội bộ ────────────────────────────────────────────────────────
 
 def _resolve_paths(source_path: str) -> list[Path]:
     """Trả về list[Path] từ source_path (file, dir, hoặc comma-separated)."""

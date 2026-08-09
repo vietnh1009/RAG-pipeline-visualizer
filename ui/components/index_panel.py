@@ -451,7 +451,7 @@ def _render_load_index_from_cache() -> None:
         n_vectors       = vs.get("n_vectors", "?")
         persist_dir     = vc.get("persist_directory", vc.get("persist_dir", "?"))
 
-        # Build badge for local-only
+        # Gắn nhãn cho cấu hình chạy hoàn toàn cục bộ
         is_local = emb_provider in _LOCAL_EMB and vdb_provider in _LOCAL_VDB
         local_badge = " 🔒 local" if is_local else ""
 

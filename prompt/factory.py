@@ -47,17 +47,12 @@ def get_prompt_builder(template: str, **kwargs) -> BasePromptBuilder:
 
 def build_prompt_builder_from_config(cfg: dict) -> BasePromptBuilder:
     """
-    Khởi tạo prompt builder từ section ``query_pipeline.prompt`` của config.yaml.
+    Khởi tạo prompt builder từ mục ``query_pipeline.prompt`` của config.yaml.
 
-    Config keys dùng
-    ----------------
-    query_pipeline.prompt.template          \"basic\" | \"citation\" | \"conversational\" | \"structured\"
-    query_pipeline.prompt.max_history_turns int (conversational only, mặc định 5)
-    query_pipeline.prompt.validate_citations bool (citation only, mặc định True)
-    query_pipeline.prompt.include_confidence bool (structured only, mặc định True)
-    query_pipeline.prompt.system_instruction str bổ sung (tuỳ chọn)
-    query_pipeline.prompt.max_context_chars  int (0 = không giới hạn)
-    data.language                            corpus language
+    Ngoài ``template``, ``system_instruction`` và ``max_context_chars``, mỗi
+    template đọc thêm một key riêng: ``max_history_turns`` (conversational),
+    ``validate_citations`` (citation), ``include_confidence`` (structured).
+    Ngôn ngữ lấy từ ``data.language``, nên phải truyền config đầy đủ.
     """
     prompt_cfg = cfg["query_pipeline"]["prompt"]
     template   = prompt_cfg.get("template", "citation")

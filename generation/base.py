@@ -1,11 +1,10 @@
 """
 generation/base.py
 ==================
-Abstract base class cho tất cả LLM generator.
+Lớp ABC cho mọi LLM generator.
 
-Giao kèo:
-    generator = SomeGenerator(**options)
-    result    = generator.generate(prompt_result) -> GenerationResult
+Hợp đồng chung:
+    result = SomeGenerator(**options).generate(prompt_result) -> GenerationResult
 """
 
 from __future__ import annotations
@@ -20,18 +19,19 @@ from prompt.base import PromptResult
 @dataclass
 class GenerationResult:
     """
-    Output của generation stage.
+    Kết quả của bước generation.
 
-    Attributes
-    ----------
-    answer         : Câu trả lời đầy đủ (string).
-    provider       : Tên provider đã dùng (\"openai\", \"ollama\"...).
-    model_name     : Tên model đã dùng.
-    input_tokens   : Số input tokens (nếu provider trả về).
-    output_tokens  : Số output tokens (nếu provider trả về).
-    finish_reason  : Lý do kết thúc (\"stop\", \"length\", \"content_filter\"...).
-    structured     : Dict nếu template = \"structured\" và parse thành công; None nếu không.
-    cited_sources  : List index nguồn được trích dẫn (1-indexed); [] nếu template không citation.
+    Tham số
+    -------
+    answer        : Câu trả lời đầy đủ.
+    provider      : Provider đã dùng (\"openai\", \"ollama\", …).
+    model_name    : Tên model đã dùng.
+    input_tokens  : Số token đầu vào, nếu provider có trả về.
+    output_tokens : Số token đầu ra, nếu provider có trả về.
+    finish_reason : Lý do dừng (\"stop\", \"length\", \"content_filter\", …).
+    structured    : Dict khi template là \"structured\" và parse được; None nếu không.
+    cited_sources : Chỉ số nguồn được trích dẫn, đánh số từ 1; [] nếu template
+                    không phải citation.
     """
     answer:        str              = ""
     provider:      str              = ""
@@ -45,14 +45,14 @@ class GenerationResult:
 
 class BaseGenerator(ABC):
     """
-    Abstract base cho mọi LLM generator.
+    Lớp cơ sở cho mọi LLM generator.
 
     Tham số
     -------
-    model_name  : Tên model (provider-specific).
-    temperature : Sampling temperature (0 = deterministic).
-    max_tokens  : Số token tối đa trong response.
-    streaming   : Nếu True, stream token khi generate.
+    model_name  : Tên model, riêng theo từng provider.
+    temperature : Nhiệt độ lấy mẫu; 0 là tất định.
+    max_tokens  : Số token tối đa trong câu trả lời.
+    streaming   : True thì trả token theo dòng khi sinh.
     """
 
     def __init__(
@@ -74,25 +74,25 @@ class BaseGenerator(ABC):
 
         Tham số
         -------
-        prompt_result : Output của prompt builder (chứa messages + metadata).
+        prompt_result : Kết quả của prompt builder, gồm messages và metadata.
 
         Trả về
         ------
-        GenerationResult với answer, token counts, cited sources, ...
+        GenerationResult chứa câu trả lời, số token, nguồn trích dẫn, …
         """
 
     @abstractmethod
     def stream(self, prompt_result: PromptResult) -> Iterator[str]:
         """
-        Stream câu trả lời token-by-token.
+        Trả câu trả lời theo dòng, từng token một.
 
         Tham số
         -------
-        prompt_result : Output của prompt builder.
+        prompt_result : Kết quả của prompt builder.
 
-        Yields
-        ------
-        str — từng đoạn text nhỏ (token hoặc chunk).
+        Sinh ra
+        -------
+        str — từng mẩu text nhỏ (token hoặc chunk).
         """
 
     def _post_process(
@@ -104,18 +104,18 @@ class BaseGenerator(ABC):
         finish_reason: str = "stop",
     ) -> GenerationResult:
         """
-        Post-process sau khi generate: parse JSON nếu structured,
-        extract citation indices nếu citation template.
+        Hậu xử lý sau khi sinh: parse JSON nếu template là structured, trích chỉ
+        số nguồn nếu template là citation.
         """
         structured     = None
         cited_sources: list[int] = []
 
-        # Parse structured output
+        # Parse kết quả JSON có cấu trúc
         if prompt_result.template_name == "structured":
             from prompt.structured_output import StructuredOutputPromptBuilder
             structured = StructuredOutputPromptBuilder.parse_response(answer)
 
-        # Extract citation indices
+        # Trích chỉ số nguồn được trích dẫn
         if prompt_result.template_name == "citation":
             from prompt.citation import CitationPromptBuilder
             cited_sources = CitationPromptBuilder.extract_cited_indices(answer)

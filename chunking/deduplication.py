@@ -1,15 +1,15 @@
 """
 chunking/deduplication.py
 =========================
-Post-split deduplication — remove duplicate or near-duplicate chunks.
+Khử trùng sau khi cắt — bỏ các chunk trùng hoặc gần trùng.
 
-Run after any chunker to clean the chunk list before embedding.
+Chạy sau bất kỳ chunker nào để làm sạch danh sách chunk trước khi embed.
 
-| Method   | Mechanism                       | Speed      | Catches                  |
-|----------|---------------------------------|------------|--------------------------|
-| exact    | MD5 hash comparison             | Very fast  | Identical text only      |
-| minhash  | MinHash + LSH shingle similarity| Fast       | Near-duplicates (~typos) |
-| semantic | Cosine similarity of embeddings | Slower     | Paraphrases, translations|
+| Cách     | Cơ chế                         | Tốc độ    | Bắt được              |
+|----------|--------------------------------|-----------|-----------------------|
+| exact    | So hash MD5                    | Rất nhanh | Chỉ text giống hệt    |
+| minhash  | MinHash + LSH trên shingle     | Nhanh     | Gần trùng, sai chính tả |
+| semantic | Cosine similarity embedding    | Chậm hơn  | Diễn giải lại, bản dịch |
 """
 
 from __future__ import annotations
@@ -27,19 +27,18 @@ def deduplicate_chunks(
     model:     str = "sentence-transformers/all-MiniLM-L6-v2",
 ) -> list[Document]:
     """
-    Remove duplicate or near-duplicate chunks.
+    Bỏ các chunk trùng hoặc gần trùng.
 
-    Parameters
-    ----------
-    chunks    : Output of any chunker's ``.split()`` method.
-    method    : Deduplication strategy (see module docstring).
-    threshold : Similarity above which two chunks are considered duplicates
-                (used by minhash and semantic methods).
-    model     : Sentence-transformers model for semantic dedup.
-
-    Returns
+    Tham số
     -------
-    Deduplicated list of Documents (first occurrence kept; order preserved).
+    chunks    : Kết quả ``.split()`` của một chunker bất kỳ.
+    method    : Cách khử trùng — xem bảng ở docstring module.
+    threshold : Ngưỡng tương đồng để coi là trùng; chỉ minhash và semantic dùng.
+    model     : Model sentence-transformers cho cách semantic.
+
+    Trả về
+    ------
+    List Document đã khử trùng, giữ bản xuất hiện đầu tiên và giữ nguyên thứ tự.
     """
     if method == "exact":
         return _exact(chunks)

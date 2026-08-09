@@ -558,7 +558,7 @@ def _page_generation():
                 help="openai: GPT-4.1-mini (rẻ, nhanh) · anthropic: Claude · google: Gemini (free tier) · ollama: local · cohere: RAG-optimised",
             )
 
-            # Model presets per provider
+            # Danh sách model gợi ý theo từng provider
             _GEN_MODEL_PRESETS: dict[str, list[str]] = {
                 "openai":    ["gpt-4.1-mini", "gpt-4o-mini", "gpt-4o", "o3-mini"],
                 "anthropic": ["claude-haiku-4-5-20251001", "claude-sonnet-4-6", "claude-opus-4-6"],
@@ -693,7 +693,7 @@ def _page_generation():
         else:
             st.info("⬆️ Cấu hình xong thì ấn **Áp dụng** để kích hoạt.", icon="💡")
 
-    # ── Query input & results ────────────────────────────────────────────────
+    # ── Ô nhập câu hỏi và khu vực kết quả ────────────────────────────────────
     # Transfer pending
     _PENDING_QUERY = [
         ("_want_ret_strategy",   "ret_strategy"),

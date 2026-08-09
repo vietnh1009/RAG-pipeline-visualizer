@@ -3,8 +3,8 @@ loader/
 =======
 Package load tài liệu PDF cho RAG indexing pipeline.
 
-Public API
-----------
+API công khai
+-------------
     from loader import PDFDocumentLoader
 
     loader = PDFDocumentLoader(language="both", pdf_strategy="marker")

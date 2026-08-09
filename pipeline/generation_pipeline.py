@@ -111,7 +111,7 @@ class GenerationPipeline:
     Thread-safe: có thể khởi tạo một lần và gọi run() đồng thời.
     """
 
-    # ── Public ────────────────────────────────────────────────────────────────
+    # ── API công khai ─────────────────────────────────────────────────────────
 
     def run(
         self,
@@ -252,7 +252,7 @@ class GenerationPipeline:
         )
         yield from generator.stream(prompt_res)
 
-    # ── Step runners ──────────────────────────────────────────────────────────
+    # ── Hàm chạy từng bước ────────────────────────────────────────────────────
 
     def _run_pre_retrieval(
         self, query: str, pre_cfg: dict,
@@ -525,7 +525,7 @@ class GenerationPipeline:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# CLI entry point
+# Điểm vào CLI
 # ──────────────────────────────────────────────────────────────────────────────
 
 def _cli():

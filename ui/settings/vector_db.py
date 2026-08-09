@@ -146,7 +146,7 @@ def render_vector_db_settings(local_only: bool = False, force_skip: bool = False
         st.session_state["vdb_collection_name"] = _auto_collection_name()
         st.session_state["_vdb_cfg_sig"] = _cfg_sig
 
-    # ── Common params ───────────────────────────────────────────────────────
+    # ── Tham số dùng chung ──────────────────────────────────────────────────
     _prev_name = st.session_state.get("vdb_collection_name", "")
     collection_name = st.text_input(
         "Collection / Index name",

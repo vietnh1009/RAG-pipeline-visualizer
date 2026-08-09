@@ -6,8 +6,8 @@ PDFDocumentLoader — điểm vào duy nhất cho bước loading (chỉ PDF).
 Nhận đường dẫn đến 1 file PDF hoặc 1 thư mục, dispatch đến đúng PDF
 loader class, và trả về list[Document] sẵn sàng cho bước chunking.
 
-PDF strategies
---------------
+Các chiến lược parse PDF
+------------------------
   pypdf          Nhanh, text layer, không cần dep thêm          (mặc định)
   pymupdf        Nhanh hơn, layout tốt hơn
   pdfplumber     Trích bảng tốt nhất (text layer)

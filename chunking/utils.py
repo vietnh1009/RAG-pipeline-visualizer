@@ -12,24 +12,23 @@ from __future__ import annotations
 
 def ensure_ollama_model(model: str, host: str = "http://localhost:11434") -> None:
     """
-    Kiểm tra Ollama model đã có sẵn chưa, nếu chưa thì tự động pull về.
+    Kiểm tra model Ollama đã có chưa, chưa có thì tự pull về.
+
     Dùng chung cho VLM (MarkerPDFLoader) và embedding (SemanticChunker).
+    Thứ tự pull: SDK Python của ollama (hiện tiến độ đẹp hơn), không được thì
+    lùi về subprocess ``ollama pull``.
 
-    Pull strategy (theo thứ tự ưu tiên):
-      1. ollama Python SDK  — stream progress đẹp hơn
-      2. subprocess         — fallback khi SDK chưa cài hoặc pull qua SDK thất bại
-
-    Parameters
-    ----------
-    model : Ollama model tag, e.g. "qwen3-embedding:8b"
-    host  : Ollama host URL — dạng http://host:port (KHÔNG có /v1 suffix)
+    Tham số
+    -------
+    model : Tag model Ollama, vd "qwen3-embedding:8b".
+    host  : URL Ollama dạng http://host:port, KHÔNG có hậu tố /v1.
     """
     # Chuẩn hoá: bỏ /v1 nếu có (app dùng OpenAI-compat URL, Ollama SDK dùng native URL)
     host = host.rstrip("/")
     if host.endswith("/v1"):
         host = host[:-3]
 
-    # ── Bước 1: kiểm tra model đã có chưa qua SDK (nếu cài) ──────────────────
+    # ── Bước 1: hỏi SDK xem model đã có chưa (nếu SDK đã cài) ────────────────
     already_present = False
     sdk_available   = False
 
@@ -38,9 +37,9 @@ def ensure_ollama_model(model: str, host: str = "http://localhost:11434") -> Non
         sdk_available = True
         client  = _ollama.Client(host=host)
         models  = [m.model for m in client.list().models]
-        # Exact match only — tag-based match (e.g. "qwen3-embedding" matching
-        # both :0.6b and :8b) is too loose: having qwen3-embedding:8b must NOT
-        # prevent pulling qwen3-embedding:0.6b when that specific version is needed.
+        # Chỉ khớp tuyệt đối. Khớp theo tên không kèm tag ("qwen3-embedding"
+        # trùng cả :0.6b lẫn :8b) là quá lỏng: đã có qwen3-embedding:8b KHÔNG
+        # được cản việc pull qwen3-embedding:0.6b khi cần đúng bản đó.
         if model in set(models):
             already_present = True
     except ImportError:
@@ -75,7 +74,7 @@ def ensure_ollama_model(model: str, host: str = "http://localhost:11434") -> Non
             # SDK pull thất bại — fallthrough sang subprocess
             print(f"\n[Ollama] SDK pull thất bại ({e}), thử lại bằng subprocess...")
 
-    # ── Bước 3: subprocess fallback ───────────────────────────────────────────
+    # ── Bước 3: phương án dự phòng bằng subprocess ────────────────────────────
     import subprocess
     print(f"[Ollama] Pulling '{model}' via subprocess (ollama pull)...")
     try:
@@ -100,5 +99,5 @@ def ensure_ollama_model(model: str, host: str = "http://localhost:11434") -> Non
         )
 
 
-# ── HuggingFace local pipeline cache ─────────────────────────────────────────
+# ── Cache pipeline HuggingFace chạy cục bộ ───────────────────────────────────
 _HF_PIPELINE_CACHE: dict[str, object] = {}

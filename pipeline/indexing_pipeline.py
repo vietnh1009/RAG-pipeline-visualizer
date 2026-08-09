@@ -119,7 +119,7 @@ class IndexingPipeline:
         self.on_progress = on_progress or (lambda *_: None)
         self.stop_event  = stop_event or threading.Event()
 
-    # ── Public ────────────────────────────────────────────────────────────────
+    # ── API công khai ─────────────────────────────────────────────────────────
 
     def run(
         self,
@@ -237,7 +237,7 @@ class IndexingPipeline:
         result.success = True
         return result
 
-    # ── Private step runners ──────────────────────────────────────────────────
+    # ── Hàm chạy từng bước, dùng nội bộ ───────────────────────────────────────
 
     def _run_loader(
         self, source_path: str, loader_cfg: dict,
@@ -420,7 +420,7 @@ class IndexingPipeline:
         return StepResult("vector_db", True, n_items=vdb_result.get("n_vectors", 0),
                            meta={"vdb_result": vdb_result})
 
-    # ── Cache helpers ─────────────────────────────────────────────────────────
+    # ── Hàm phụ trợ cho cache ─────────────────────────────────────────────────
 
     def make_cache_keys(
         self,
@@ -467,7 +467,7 @@ class IndexingPipeline:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# CLI entry point
+# Điểm vào CLI
 # ──────────────────────────────────────────────────────────────────────────────
 
 def _cli():

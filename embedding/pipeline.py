@@ -1,12 +1,12 @@
 """
 embedding/pipeline.py
 =====================
-EmbeddingPipeline — combines a dense embedder with an optional sparse embedder.
+EmbeddingPipeline — ghép embedder dense với embedder sparse tuỳ chọn.
 
-This is the object that vector_db.py and retrieval.py use.
-It produces both dense and sparse vectors in a single interface.
+Đây là đối tượng mà ``vector_db`` và ``retrieval`` thực sự dùng: một giao diện
+duy nhất sinh ra cả vector dense lẫn sparse.
 
-Usage
+Ví dụ
 -----
     pipeline = EmbeddingPipeline(
         dense_provider="huggingface",
@@ -14,10 +14,8 @@ Usage
         enable_sparse=True,
         sparse_method="bm25",
     )
-    pipeline.fit_sparse(corpus_texts)        # required for BM25
-    result = pipeline.embed_documents(texts)
-    # result["dense"]  -> list[list[float]]
-    # result["sparse"] -> list[dict[str, float]] or None
+    pipeline.fit_sparse(corpus_texts)        # BM25 bắt buộc bước này
+    pipeline.embed_documents(texts)          # {"dense": ..., "sparse": ...}
 """
 
 from __future__ import annotations
@@ -31,16 +29,16 @@ from embedding.sparse_embedder import SparseMethod, get_sparse_embedder
 
 class EmbeddingPipeline:
     """
-    Unified dense + optional sparse embedding interface.
+    Giao diện thống nhất cho embedding dense + sparse tuỳ chọn.
 
-    Parameters
-    ----------
-    dense_provider : Provider name (see factory.py for valid values).
-    dense_model    : Model identifier for the dense embedder.
-    dense_kwargs   : Extra kwargs forwarded to the dense embedder constructor.
-    enable_sparse  : Also compute sparse (BM25 / SPLADE) vectors.
+    Tham số
+    -------
+    dense_provider : Tên provider — xem ``factory.py`` để biết giá trị hợp lệ.
+    dense_model    : Tên model cho embedder dense.
+    dense_kwargs   : Tham số phụ chuyển thẳng cho constructor của embedder dense.
+    enable_sparse  : Tính thêm vector sparse (BM25 / SPLADE).
     sparse_method  : "bm25" | "splade"
-    sparse_model   : SPLADE model name (ignored for BM25).
+    sparse_model   : Tên model SPLADE; BM25 bỏ qua tham số này.
     """
 
     def __init__(
@@ -59,11 +57,11 @@ class EmbeddingPipeline:
         self._sparse        = get_sparse_embedder(sparse_method, sparse_model) if enable_sparse else None
 
     # ------------------------------------------------------------------
-    # Corpus fitting (BM25 requires this before embedding)
+    # Fit trên corpus — BM25 bắt buộc chạy trước khi embed
     # ------------------------------------------------------------------
 
     def fit_sparse(self, corpus_texts: list[str]) -> "EmbeddingPipeline":
-        """Fit BM25 IDF statistics on the corpus. No-op for SPLADE."""
+        """Tính thống kê IDF của BM25 trên corpus. SPLADE không cần, bỏ qua."""
         if self._sparse:
             self._sparse.fit(corpus_texts)
         return self
@@ -74,14 +72,12 @@ class EmbeddingPipeline:
 
     def embed_documents(self, texts: list[str]) -> dict[str, Any]:
         """
-        Embed a list of document texts.
+        Embed một danh sách text tài liệu.
 
-        Returns
-        -------
-        {
-            "dense":  list[list[float]],           # always present
-            "sparse": list[dict[str, float]] | None # only if enable_sparse
-        }
+        Trả về
+        ------
+        {"dense":  list[list[float]],             # luôn có
+         "sparse": list[dict[str, float]] | None} # chỉ khi enable_sparse
         """
         return {
             "dense":  self._dense.embed_documents(texts),
@@ -90,14 +86,9 @@ class EmbeddingPipeline:
 
     def embed_query(self, query: str) -> dict[str, Any]:
         """
-        Embed a single query string.
+        Embed một chuỗi query.
 
-        Returns
-        -------
-        {
-            "dense":  list[float],
-            "sparse": dict[str, float] | None
-        }
+        Trả về ``{"dense": list[float], "sparse": dict[str, float] | None}``.
         """
         return {
             "dense":  self._dense.embed_query(query),
@@ -107,9 +98,9 @@ class EmbeddingPipeline:
     @property
     def langchain_embedder(self) -> Embeddings:
         """
-        The underlying LangChain Embeddings object.
+        Đối tượng Embeddings gốc của LangChain.
 
-        Pass this to LangChain vector stores that require a standard
-        Embeddings object (e.g. Chroma, FAISS, pgvector).
+        Truyền cái này cho các vector store đòi đúng kiểu Embeddings chuẩn
+        (Chroma, FAISS, pgvector…).
         """
         return self._dense.embedder

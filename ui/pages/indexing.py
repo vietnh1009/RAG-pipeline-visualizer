@@ -484,7 +484,7 @@ def _run_pipeline_and_show_progress() -> None:
             # ── Kiểm tra pipeline cache ────────────────────────────────────
             cached_vdb = cache.load_vector_db(input_hash, vdb_key)
             if cached_vdb is not None and not vdb_cfg.get("force_reindex"):
-                # Cache hit: reconnect to existing DB (không embed lại)
+                # Cache hit: kết nối lại DB sẵn có, không embed lại
                 with st.spinner("🔍 VDB cache hit — đang kết nối lại..."):
                     try:
                         from vector_db import get_vector_store
@@ -646,8 +646,8 @@ def _run_pipeline_and_show_progress() -> None:
                     vdb_cfg_for_cache,
                     embed_key=embed_key,
                 )
-                # Write pipeline chain manifest so list_complete_pipelines
-                # can reconstruct this run even without parent_key in meta
+                # Ghi manifest chuỗi pipeline để list_complete_pipelines dựng
+                # lại được lần chạy này ngay cả khi meta thiếu parent_key
                 _write_pipeline_chain(
                     cache        = cache,
                     input_hash   = input_hash,

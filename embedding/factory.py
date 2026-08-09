@@ -35,23 +35,19 @@ _REGISTRY: dict[str, tuple[str, str]] = {
 
 def get_embedder(provider: str, model_name: str, **kwargs: Any) -> BaseEmbedder:
     """
-    Instantiate a dense embedder by provider name.
+    Khởi tạo embedder dense theo tên provider.
 
-    Parameters
-    ----------
-    provider   : One of "openai", "cohere", "huggingface", "fastembed", "ollama".
-    model_name : Provider-specific model identifier.
-    **kwargs   : Constructor arguments forwarded to the embedder class.
+    Tham số
+    -------
+    provider   : "openai" | "cohere" | "huggingface" | "fastembed" | "ollama".
+    model_name : Tên model của provider tương ứng.
+    **kwargs   : Tham số khởi tạo chuyển thẳng cho lớp embedder.
 
-    Examples
-    --------
-    >>> get_embedder("openai",      "text-embedding-3-small")
+    Ví dụ
+    -----
     >>> get_embedder("openai",      "text-embedding-3-large", dimensions=512)
     >>> get_embedder("cohere",      "embed-multilingual-v3.0", input_type="search_document")
     >>> get_embedder("huggingface", "BAAI/bge-m3", device="cuda")
-    >>> get_embedder("huggingface", "Qwen/Qwen3-Embedding", device="cuda",
-    ...              query_instruction="Retrieve relevant passages:",
-    ...              document_instruction="Represent this document:")
     >>> get_embedder("fastembed",   "intfloat/multilingual-e5-small")
     >>> get_embedder("ollama",      "bge-m3", base_url="http://localhost:11434")
     """
@@ -70,19 +66,12 @@ def get_embedder(provider: str, model_name: str, **kwargs: Any) -> BaseEmbedder:
 
 def get_embedder_from_config(cfg: dict) -> "EmbeddingPipeline":
     """
-    Build an EmbeddingPipeline from the ``indexing.embedding`` section of config.yaml.
+    Dựng EmbeddingPipeline từ mục ``indexing.embedding`` của config.yaml.
 
-    Config keys used
-    ----------------
-    indexing.embedding.provider             dense provider
-    indexing.embedding.model_name           dense model
-    indexing.embedding.dimensions           MRL truncation (openai only, optional)
-    indexing.embedding.device               "cpu" | "cuda" | "mps" (local providers)
-    indexing.embedding.query_instruction    instruction prefix for queries
-    indexing.embedding.document_instruction instruction prefix for documents
-    indexing.embedding.input_type           asymmetric input type (cohere)
-    indexing.embedding.enable_sparse        bool — enable hybrid retrieval
-    indexing.embedding.sparse_method        "bm25" | "splade"
+    Đọc ``provider``, ``model_name``, ``enable_sparse``, ``sparse_method``, cùng
+    vài key chỉ áp cho một số provider: ``dimensions`` (openai), ``input_type``
+    (cohere), ``device`` / ``query_instruction`` / ``document_instruction``
+    (huggingface, fastembed), ``ollama_base_url`` (ollama).
     """
     from embedding.pipeline import EmbeddingPipeline
 
@@ -92,7 +81,7 @@ def get_embedder_from_config(cfg: dict) -> "EmbeddingPipeline":
 
     dense_kwargs: dict[str, Any] = {}
 
-    # Provider-specific extras — only pass what each provider understands
+    # Chỉ truyền đúng những key mà từng provider hiểu
     if provider == "openai":
         if emb_cfg.get("dimensions"):
             dense_kwargs["dimensions"] = emb_cfg["dimensions"]

@@ -1,23 +1,21 @@
 """
 chunking/contextual.py
 ======================
-Contextual Chunking (Anthropic, September 2024).
+Contextual Chunking (Anthropic, 09/2024).
 
-Problem: a chunk pulled out of a document loses surrounding context.
-  Orphan chunk: "The prevalence is estimated at 25 %."
-  Missing:       what "prevalence" refers to.
+Vấn đề: chunk tách khỏi tài liệu là mất ngữ cảnh xung quanh. Một chunk mồ côi
+kiểu "Tỷ lệ hiện mắc ước tính khoảng 25 %." không cho biết đang nói về bệnh gì.
 
-Solution: for each chunk produced by a base splitter, an LLM reads the
-full document and writes 1–2 context sentences that are prepended to the
-chunk before it is embedded.
+Cách làm: với mỗi chunk do chunker nền sinh ra, LLM đọc toàn bộ tài liệu và viết
+1–2 câu ngữ cảnh, gắn lên đầu chunk trước khi đem embed.
 
-Reported impact: + Contextual Retrieval + BM25 reduces retrieval failure
-rate by up to 67 % compared to naive chunking (Anthropic, 2024).
+Hiệu quả công bố: kết hợp Contextual Retrieval + BM25 giảm tới 67 % tỉ lệ truy
+hồi hỏng so với chunking thường (Anthropic, 2024).
 
-Cost tip: use prompt caching on the document portion to cut costs ~80 %.
+Mẹo tiết kiệm: bật prompt caching cho phần tài liệu, chi phí giảm khoảng 80 %.
 
-Use when : chunks are short, terminology is specialised, coreferences are
-           common, and recall is more important than ingestion cost.
+Dùng khi: chunk ngắn, thuật ngữ chuyên ngành, nhiều đại từ tham chiếu, và recall
+quan trọng hơn chi phí lúc nạp dữ liệu.
 """
 
 from __future__ import annotations
@@ -30,17 +28,16 @@ from utils.llm import call_llm
 
 class ContextualChunker(BaseChunker):
     """
-    Prepend an LLM-generated context prefix to each chunk.
+    Gắn tiền tố ngữ cảnh do LLM sinh vào đầu mỗi chunk.
 
-    Parameters
-    ----------
-    base_strategy : Inner chunking strategy applied first.
-                    Accepts any key from the factory registry
-                    (e.g. "recursive", "sentence_aware").
-    base_kwargs   : Constructor kwargs forwarded to the base chunker.
-    llm_model     : Fast, cheap model recommended (e.g. claude-haiku-4-5-20251001).
+    Tham số
+    -------
+    base_strategy : Chiến lược chunking chạy trước; nhận mọi key trong registry
+                    của factory, ví dụ "recursive", "sentence_aware".
+    base_kwargs   : Tham số khởi tạo chuyển cho chunker nền.
+    llm_model     : Nên chọn model nhanh và rẻ, vd claude-haiku-4-5-20251001.
     llm_provider  : "anthropic" | "openai" | "google"
-    n_sentences   : Number of context sentences to prepend.
+    n_sentences   : Số câu ngữ cảnh cần gắn thêm.
     """
 
     _PROMPT = (
@@ -80,7 +77,7 @@ class ContextualChunker(BaseChunker):
         )
         base_chunks = base_chunker.split(docs)
 
-        # Build source -> full text map for context generation
+        # Bảng tra source -> toàn văn, dùng khi sinh ngữ cảnh
         source_text: dict[str, str] = {}
         for doc in docs:
             src = doc.metadata.get("source", "")

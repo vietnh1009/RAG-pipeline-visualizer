@@ -1,25 +1,23 @@
 """
 embedding/huggingface_embedder.py
 ==================================
-HuggingFace sentence-transformers — run any model locally.
+sentence-transformers của HuggingFace — chạy model bất kỳ ngay trên máy.
 
-Recommended models for Vietnamese RAG (May 2025)
--------------------------------------------------
-  BAAI/bge-m3                     1024  8192   ⭐⭐⭐⭐   Dense+sparse+multivec
-  Qwen/Qwen3-Embedding            2048  32K    ⭐⭐⭐⭐⭐  MTEB #1, instruction
-  intfloat/multilingual-e5-large  1024  512    ⭐⭐⭐    100 languages
-  intfloat/e5-mistral-7b-instruct 4096  32K    ⭐⭐⭐    Instruction-tuned
-  nomic-ai/nomic-embed-text-v1.5  768   8192   ⭐⭐⭐    MRL support
-  Alibaba-NLP/gte-Qwen2-7B        3584  131K   ⭐⭐⭐⭐   Very long context
-  VinAI/phobert-large             768   256    ⭐⭐⭐⭐   Vietnamese-specific
+Model khuyến nghị cho RAG tiếng Việt (05/2025), cột: chiều · context · điểm
+---------------------------------------------------------------------------
+  BAAI/bge-m3                     1024  8192  ⭐⭐⭐⭐   dense+sparse+multivec
+  Qwen/Qwen3-Embedding            2048  32K   ⭐⭐⭐⭐⭐  đứng đầu MTEB, có instruction
+  intfloat/multilingual-e5-large  1024  512   ⭐⭐⭐     100 ngôn ngữ
+  intfloat/e5-mistral-7b-instruct 4096  32K   ⭐⭐⭐     tinh chỉnh theo instruction
+  nomic-ai/nomic-embed-text-v1.5   768  8192  ⭐⭐⭐     hỗ trợ MRL
+  Alibaba-NLP/gte-Qwen2-7B        3584  131K  ⭐⭐⭐⭐   context rất dài
+  VinAI/phobert-large              768   256  ⭐⭐⭐⭐   chuyên tiếng Việt
 
-Instruction-following models
------------------------------
-Qwen3-Embedding, E5-mistral, GTE-Qwen2 accept asymmetric instruction prefixes.
-Pass ``query_instruction`` and ``document_instruction`` to activate them.
-These MUST be consistent between index time and query time.
+Model theo instruction: Qwen3-Embedding, E5-mistral, GTE-Qwen2 nhận tiền tố
+instruction riêng cho query và tài liệu. Truyền ``query_instruction`` và
+``document_instruction`` để bật, và giữ nguyên giá trị giữa lúc index và lúc
+truy vấn, ví dụ:
 
-  Example for medical Vietnamese:
     query_instruction    = "Retrieve relevant passages for this medical question:"
     document_instruction = "Represent this Vietnamese medical document:"
 """
@@ -33,14 +31,16 @@ from embedding.base import BaseEmbedder
 
 class HuggingFaceEmbedder(BaseEmbedder):
     """
-    Parameters
-    ----------
-    model_name           : HuggingFace model identifier.
+    Embedder chạy model HuggingFace cục bộ.
+
+    Tham số
+    -------
+    model_name           : Tên model trên HuggingFace.
     device               : "cpu" | "cuda" | "mps"
-    normalize_embeddings : L2-normalise vectors (recommended for cosine similarity).
-    query_instruction    : Instruction prefix for queries (instruction-following models).
-    document_instruction : Instruction prefix for documents.
-    encode_kwargs        : Extra kwargs for model.encode() (e.g. batch_size=64).
+    normalize_embeddings : Chuẩn hoá L2, nên bật khi dùng cosine similarity.
+    query_instruction    : Tiền tố instruction cho query.
+    document_instruction : Tiền tố instruction cho tài liệu.
+    encode_kwargs        : Tham số phụ cho model.encode(), vd batch_size=64.
     """
 
     def __init__(

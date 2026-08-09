@@ -1,25 +1,25 @@
 """
 embedding/
 ==========
-Text embedding package for the RAG indexing pipeline.
+Chuyển text thành vector cho pipeline indexing.
 
-Providers
----------
-  openai       text-embedding-3-small / large  — API, MRL support
-  cohere       embed-multilingual-v3.0         — best API choice for Vietnamese
-  huggingface  BAAI/bge-m3, Qwen3-Embedding   — local, no API key, instruction-tuned
-  fastembed    multilingual-e5-small           — CPU ONNX, no GPU needed
-  ollama       bge-m3, nomic-embed-text        — local server, privacy-first
+Provider
+--------
+  openai       text-embedding-3-small / large — API, hỗ trợ MRL
+  cohere       embed-multilingual-v3.0        — lựa chọn API tốt nhất cho tiếng Việt
+  huggingface  BAAI/bge-m3, Qwen3-Embedding   — chạy cục bộ, không cần API key
+  fastembed    multilingual-e5-small          — ONNX trên CPU, không cần GPU
+  ollama       bge-m3, nomic-embed-text       — server cục bộ, ưu tiên riêng tư
 
-Public API
-----------
+API công khai
+-------------
     from embedding import get_embedder, get_embedder_from_config, EmbeddingPipeline
 
-    # Dense only
+    # chỉ dense
     embedder = get_embedder("huggingface", "BAAI/bge-m3", device="cuda")
     vectors  = embedder.embed_documents(["Hello", "Xin chào"])
 
-    # Dense + sparse (hybrid retrieval)
+    # dense + sparse cho hybrid retrieval
     pipeline = EmbeddingPipeline(
         dense_provider="cohere",
         dense_model="embed-multilingual-v3.0",
@@ -27,11 +27,9 @@ Public API
         sparse_method="bm25",
     )
     pipeline.fit_sparse(corpus_texts)
-    result = pipeline.embed_documents(texts)
-    # result["dense"]  -> list[list[float]]
-    # result["sparse"] -> list[dict[str, float]]
+    result = pipeline.embed_documents(texts)   # {"dense": ..., "sparse": ...}
 
-    # Config-driven
+    # hoặc lấy cấu hình từ config.yaml
     pipeline = get_embedder_from_config(cfg)
 """
 

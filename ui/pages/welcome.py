@@ -38,7 +38,7 @@ def _page_welcome():
 
     col1, col2 = st.columns(2, gap="medium")
 
-    # ── Stage 1 card ──────────────────────────────────────────────────────────
+    # ── Thẻ Stage 1 ───────────────────────────────────────────────────────────
     with col1:
         st.markdown("""
 <div style="border:1px solid rgba(99,102,241,.25);border-top:3px solid #6366f1;
@@ -117,7 +117,7 @@ def _page_welcome():
 </div>
 """, unsafe_allow_html=True)
 
-    # ── Stage 2 card ──────────────────────────────────────────────────────────
+    # ── Thẻ Stage 2 ───────────────────────────────────────────────────────────
     with col2:
         st.markdown("""
 <div style="border:1px solid rgba(6,182,212,.25);border-top:3px solid #06b6d4;

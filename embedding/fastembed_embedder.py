@@ -1,20 +1,18 @@
 """
 embedding/fastembed_embedder.py
 ================================
-FastEmbed by Qdrant — CPU-optimised ONNX inference.
+FastEmbed của Qdrant — suy luận ONNX tối ưu cho CPU.
 
-Significantly faster than sentence-transformers on CPU because models
-are exported to ONNX with quantisation.  No GPU required.
+Nhanh hơn hẳn sentence-transformers trên CPU vì model được xuất sang ONNX kèm
+lượng tử hoá. Không cần GPU.
 
-Popular models
+Model phổ biến
 --------------
-  BAAI/bge-small-en-v1.5                           384-dim   Fast, English
-  BAAI/bge-base-en-v1.5                            768-dim   Better quality
-  intfloat/multilingual-e5-small                   384-dim   Multilingual (VI ok)
-  sentence-transformers/paraphrase-multilingual-    384-dim   Multilingual
-      MiniLM-L12-v2
+  BAAI/bge-small-en-v1.5          384 chiều  nhanh, tiếng Anh
+  BAAI/bge-base-en-v1.5           768 chiều  chất lượng tốt hơn
+  intfloat/multilingual-e5-small  384 chiều  đa ngôn ngữ, tiếng Việt tạm ổn
 
-Use when: CPU-only deployment, edge devices, quick prototyping without GPU.
+Dùng khi: triển khai chỉ có CPU, thiết bị biên, dựng thử nhanh không cần GPU.
 """
 
 from __future__ import annotations
@@ -26,10 +24,12 @@ from embedding.base import BaseEmbedder
 
 class FastEmbedEmbedder(BaseEmbedder):
     """
-    Parameters
-    ----------
-    model_name : FastEmbed model name (auto-downloaded on first use).
-    max_length : Maximum token length per text.
+    Embedder dùng FastEmbed.
+
+    Tham số
+    -------
+    model_name : Tên model FastEmbed, tự tải về ở lần dùng đầu.
+    max_length : Số token tối đa cho mỗi đoạn text.
     """
 
     def __init__(

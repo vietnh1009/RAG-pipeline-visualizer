@@ -89,8 +89,8 @@ class StructuredOutputPromptBuilder(BasePromptBuilder):
         context = self._format_context(docs)
         vi      = (self.language == "vi")
 
-        # System instruction always in EN — LLM follows EN instructions more reliably
-        # VI/EN setting only affects the user message template (question/context format)
+        # System instruction luôn để tiếng Anh — LLM tuân thủ ổn định hơn.
+        # Lựa chọn vi/en chỉ đổi template của user message.
         system_text = self._SYSTEM_EN
         user_text   = (self._USER_VI if vi else self._USER_EN).format(
             context=context,

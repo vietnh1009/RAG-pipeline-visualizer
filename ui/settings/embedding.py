@@ -73,7 +73,7 @@ def render_embedding_settings(local_only: bool = False, force_skip: bool = False
         st.session_state["sel_emb_provider"] = (
             "huggingface" if local_only else "openai"
         )
-    # Ensure saved provider is still in filtered list
+    # Provider đã lưu có thể đã bị lọc khỏi danh sách — kiểm tra lại
     if st.session_state["sel_emb_provider"] not in providers:
         st.session_state["sel_emb_provider"] = providers[0]
 
@@ -87,7 +87,7 @@ def render_embedding_settings(local_only: bool = False, force_skip: bool = False
 
     meta = EMBEDDING_PROVIDER_META[provider]
 
-    # ── Model selection ─────────────────────────────────────────────────────
+    # ── Chọn model ──────────────────────────────────────────────────────────
     models = meta["models"]
     if "sel_emb_model" not in st.session_state:
         st.session_state["sel_emb_model"] = meta["default"]
@@ -424,7 +424,7 @@ def render_embedding_settings(local_only: bool = False, force_skip: bool = False
             "bước này được thực hiện tự động khi ấn **Process**."
         )
 
-    # ── Preview limit ────────────────────────────────────────────────────────
+    # ── Giới hạn số chunk xem trước ──────────────────────────────────────────
     st.markdown("")
     st.session_state.setdefault('emb_embed_all', False)
     _embed_all = st.checkbox(

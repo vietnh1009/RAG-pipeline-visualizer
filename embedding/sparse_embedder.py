@@ -1,25 +1,23 @@
 """
 embedding/sparse_embedder.py
 =============================
-Sparse embedders for hybrid retrieval — BM25 and SPLADE.
+Embedder sparse cho hybrid retrieval — BM25 và SPLADE.
 
-Dense vectors capture semantic meaning; sparse vectors capture exact
-keywords.  Hybrid retrieval (dense + sparse) consistently outperforms
-either approach alone — especially for Vietnamese where proper nouns,
-product codes, and technical terms need exact matching.
+Vector dense nắm ngữ nghĩa, vector sparse nắm từ khoá chính xác. Kết hợp cả hai
+gần như luôn tốt hơn từng cách riêng, nhất là với tiếng Việt khi danh từ riêng,
+mã sản phẩm và thuật ngữ cần khớp đúng chữ.
 
 BM25
 ----
-Classic probabilistic keyword scoring.  Fast, no GPU, no training data.
-Produces {token: bm25_score} per document.
-Must call .fit(corpus_texts) before embedding documents.
+Chấm điểm từ khoá theo xác suất cổ điển. Nhanh, không cần GPU, không cần dữ
+liệu huấn luyện. Sinh ra {token: điểm_bm25} cho mỗi document.
+Bắt buộc gọi ``.fit(corpus_texts)`` trước khi embed.
 
 SPLADE
 ------
-Sparse Lexical and Expansion Model (Formal et al., 2021).
-Learns sparse representations via a masked-language model, automatically
-expanding "đái tháo đường" → {"tiểu_đường", "glucose", "insulin", ...}.
-Requires a transformer model; GPU recommended for speed.
+Sparse Lexical and Expansion Model (Formal et al., 2021). Học biểu diễn sparse
+qua masked-language model, tự mở rộng "đái tháo đường" →
+{"tiểu_đường", "glucose", "insulin", …}. Cần model transformer, nên có GPU.
 """
 
 from __future__ import annotations
@@ -29,32 +27,32 @@ from typing import Literal
 
 class BM25Embedder:
     """
-    BM25 sparse embedding using rank-bm25.
+    Embedding sparse BM25 bằng thư viện rank-bm25.
 
-    Usage
+    Ví dụ
     -----
     >>> bm25 = BM25Embedder()
-    >>> bm25.fit(corpus_texts)                    # build IDF statistics
-    >>> doc_vecs  = bm25.embed_documents(texts)   # list[dict[str, float]]
-    >>> query_vec = bm25.embed_query("my query")  # dict[str, float]
+    >>> bm25.fit(corpus_texts)                    # dựng thống kê IDF
+    >>> bm25.embed_documents(texts)               # list[dict[str, float]]
+    >>> bm25.embed_query("câu hỏi của tôi")       # dict[str, float]
     """
 
     def __init__(self):
         self._bm25 = None
 
     def fit(self, corpus: list[str]) -> "BM25Embedder":
-        """Build BM25 IDF statistics from the corpus. Must be called before embedding."""
+        """Dựng thống kê IDF từ corpus. Bắt buộc gọi trước khi embed."""
         from rank_bm25 import BM25Okapi
 
         self._bm25 = BM25Okapi([self._tokenize(t) for t in corpus])
         return self
 
     def embed_documents(self, texts: list[str]) -> list[dict[str, float]]:
-        """Return a sparse vector per document."""
+        """Trả về một vector sparse cho mỗi document."""
         return [self._vector(t) for t in texts]
 
     def embed_query(self, query: str) -> dict[str, float]:
-        """Return a sparse vector for one query string."""
+        """Trả về vector sparse cho một chuỗi query."""
         return self._vector(query)
 
     @staticmethod
@@ -75,16 +73,16 @@ class BM25Embedder:
 
 class SPLADEEmbedder:
     """
-    SPLADE sparse embedding via a masked-language model.
+    Embedding sparse SPLADE qua masked-language model.
 
-    Produces high-dimensional sparse vectors over the full vocabulary.
-    Non-zero entries represent importance of each token including
-    implicitly expanded related terms.
+    Sinh vector sparse số chiều lớn trải trên toàn bộ từ vựng; các vị trí khác 0
+    thể hiện độ quan trọng của từng token, kể cả những từ liên quan được mở rộng
+    ngầm.
 
-    Parameters
-    ----------
-    model_name : HuggingFace SPLADE model.
-                 Default: "naver/splade-cocondenser-ensembledistil"
+    Tham số
+    -------
+    model_name : Model SPLADE trên HuggingFace.
+                 Mặc định "naver/splade-cocondenser-ensembledistil".
     device     : "cpu" | "cuda"
     """
 
@@ -110,14 +108,14 @@ class SPLADEEmbedder:
         self._model.eval()
 
     def embed_documents(self, texts: list[str]) -> list[dict[str, float]]:
-        """Return a sparse vector per document."""
+        """Trả về một vector sparse cho mỗi document."""
         return [self._vector(t) for t in texts]
 
     def embed_query(self, query: str) -> dict[str, float]:
-        """Return a sparse vector for one query string."""
+        """Trả về vector sparse cho một chuỗi query."""
         return self._vector(query)
 
-    # No fit() needed — SPLADE is model-based, not corpus-dependent.
+    # SPLADE dựa vào model chứ không phụ thuộc corpus, nên fit() là rỗng
     def fit(self, corpus: list[str]) -> "SPLADEEmbedder":
         return self
 
@@ -134,7 +132,7 @@ class SPLADEEmbedder:
         with torch.no_grad():
             logits = self._model(**tokens).logits           # (1, seq, vocab)
 
-        # SPLADE aggregation: max over sequence, ReLU, log1p
+        # Gộp theo cách của SPLADE: ReLU → log1p → lấy max theo chiều chuỗi
         weights = torch.log1p(torch.relu(logits))
         agg     = weights.max(dim=1).values.squeeze(0)     # (vocab,)
 
@@ -150,7 +148,7 @@ class SPLADEEmbedder:
 
 
 # ---------------------------------------------------------------------------
-# Factory
+# Factory tạo embedder sparse
 # ---------------------------------------------------------------------------
 
 SparseMethod = Literal["bm25", "splade"]
@@ -162,13 +160,13 @@ def get_sparse_embedder(
     device:     str = "cpu",
 ) -> BM25Embedder | SPLADEEmbedder:
     """
-    Return a sparse embedder instance.
+    Trả về một embedder sparse.
 
-    Parameters
-    ----------
+    Tham số
+    -------
     method     : "bm25" | "splade"
-    model_name : SPLADE model name (ignored for BM25).
-    device     : "cpu" | "cuda" (SPLADE only).
+    model_name : Tên model SPLADE; BM25 bỏ qua.
+    device     : "cpu" | "cuda", chỉ áp cho SPLADE.
     """
     if method == "bm25":
         return BM25Embedder()

@@ -1,15 +1,15 @@
 """
 chunking/recursive.py
 =====================
-Recursive character splitting — the recommended default strategy.
+Cắt đệ quy theo ký tự — chiến lược mặc định khuyến nghị.
 
-Tries separators in priority order (paragraph → line → sentence → word →
-character) so chunks always end at a natural boundary when possible.
+Thử lần lượt các dấu tách theo thứ tự ưu tiên (đoạn → dòng → câu → từ → ký tự)
+nên chunk luôn kết thúc ở ranh giới tự nhiên khi có thể.
 
-Extra Markdown separators are included so heading lines (# / ##) and
-code fences (```) act as preferred break points.
+Danh sách dấu tách có thêm cú pháp Markdown để dòng heading (# / ##) và khối
+code (```) trở thành điểm ngắt được ưu tiên.
 
-Use when : general-purpose default for plain text and Markdown documents.
+Dùng khi: mặc định cho văn bản thuần và tài liệu Markdown.
 """
 
 from __future__ import annotations
@@ -19,28 +19,28 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from chunking.base import BaseChunker
 
-# Separator list ordered coarsest → finest
+# Dấu tách xếp từ thô đến mịn
 _SEPARATORS = [
-    "\n#{1,6} ",   # Markdown headings
-    "```\n",       # code fence
-    "\n\n",        # paragraph break
-    "\n",          # line break
-    ". ",          # English sentence end
+    "\n#{1,6} ",   # heading Markdown
+    "```\n",       # khối code
+    "\n\n",        # hết đoạn
+    "\n",          # xuống dòng
+    ". ",          # hết câu
     "! ", "? ",
-    "。", "，",    # CJK sentence / clause
-    " ",           # word boundary
-    "",            # character (last resort)
+    "。", "，",    # dấu câu / mệnh đề CJK
+    " ",           # ranh giới từ
+    "",            # từng ký tự — phương án cuối
 ]
 
 
 class RecursiveChunker(BaseChunker):
     """
-    Recursively split text using a priority list of separators.
+    Cắt đệ quy theo danh sách dấu tách ưu tiên.
 
-    Parameters
-    ----------
-    chunk_size    : Target chunk size in characters.
-    chunk_overlap : Overlap in characters between consecutive chunks.
+    Tham số
+    -------
+    chunk_size    : Kích thước chunk mong muốn, tính bằng ký tự.
+    chunk_overlap : Số ký tự chồng lấn giữa hai chunk liên tiếp.
     """
 
     def split(self, docs: list[Document]) -> list[Document]:

@@ -38,19 +38,19 @@ _REGISTRY: dict[str, tuple[str, str]] = {
 
 def get_chunker(strategy: str, **kwargs: Any) -> BaseChunker:
     """
-    Instantiate a chunker by strategy name.
+    Khởi tạo chunker theo tên chiến lược.
 
-    Parameters
-    ----------
-    strategy : One of the strategy keys listed in ``_REGISTRY``.
-    **kwargs : Constructor arguments forwarded to the chosen class.
+    Tham số
+    -------
+    strategy : Một trong các key của ``_REGISTRY``.
+    **kwargs : Tham số khởi tạo chuyển thẳng cho lớp tương ứng.
 
-    Examples
-    --------
+    Ví dụ
+    -----
     >>> get_chunker("recursive",    chunk_size=500, chunk_overlap=100)
-    >>> get_chunker("format_aware", chunk_size=500, chunk_overlap=100, format_type="markdown")
+    >>> get_chunker("format_aware", chunk_size=500, format_type="markdown")
     >>> get_chunker("hierarchical", parent_chunk_size=2000, chunk_size=400)
-    >>> get_chunker("contextual",   base_strategy="recursive", llm_model="claude-haiku-4-5-20251001")
+    >>> get_chunker("contextual",   base_strategy="recursive")
     """
     entry = _REGISTRY.get(strategy)
     if entry is None:
@@ -64,9 +64,7 @@ def get_chunker(strategy: str, **kwargs: Any) -> BaseChunker:
 
 
 def chunk_documents_from_config(docs: list[Document], cfg: dict) -> list[Document]:
-    """
-    Build and run a chunker from the ``indexing.chunking`` section of config.yaml.
-    """
+    """Dựng và chạy chunker theo mục ``indexing.chunking`` của config.yaml."""
     chunk_cfg = cfg["indexing"]["chunking"]
     strategy  = chunk_cfg.get("strategy", "recursive")
 

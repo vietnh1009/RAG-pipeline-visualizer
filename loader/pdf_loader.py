@@ -133,7 +133,7 @@ MARKER_CACHE_DIR: Path = Path(__file__).resolve().parent.parent / ".marker_cache
 DOCLING_CACHE_DIR: Path = Path(__file__).resolve().parent.parent / ".docling_cache" / "images"
 
 # ===========================================================================
-# 1. PyPDF — text layer, zero extra deps
+# 1. PyPDF — đọc text layer, không cần thư viện thêm
 # ===========================================================================
 
 class PyPDFLoader(BaseLoader):
@@ -156,7 +156,7 @@ class PyPDFLoader(BaseLoader):
 
 
 # ===========================================================================
-# 2. PyMuPDF — text layer, fastest
+# 2. PyMuPDF — đọc text layer, nhanh nhất
 # ===========================================================================
 
 class PyMuPDFLoader(BaseLoader):
@@ -193,7 +193,7 @@ class PyMuPDFLoader(BaseLoader):
 
 
 # ===========================================================================
-# 3. pdfplumber — best table extraction (text layer)
+# 3. pdfplumber — trích bảng tốt nhất trong nhóm đọc text layer
 # ===========================================================================
 
 class PDFPlumberLoader(BaseLoader):
@@ -255,12 +255,12 @@ class PDFPlumberLoader(BaseLoader):
 
 
 # ===========================================================================
-# 4. Unstructured — best overall (OCR + tables + figures)
+# 4. Unstructured — toàn diện nhất: OCR + bảng + hình
 # ===========================================================================
 
 class UnstructuredPDFLoader(BaseLoader):
     """
-    PDF extraction via Unstructured.io — best overall quality.
+    Trích PDF bằng Unstructured.io — chất lượng toàn diện nhất.
 
     Xử lý: text layer, PDF scan (qua OCR), bảng (→ Markdown), hình ảnh.
     Trả về 1 Document / trang với nội dung đã được phân loại và clean.
@@ -374,7 +374,7 @@ class UnstructuredPDFLoader(BaseLoader):
 
 
 # ===========================================================================
-# 5. Docling — IBM Research, excellent Markdown output
+# 5. Docling — IBM Research, Markdown đầu ra rất sạch
 # ===========================================================================
 
 @contextlib.contextmanager
@@ -620,7 +620,7 @@ class DoclingPDFLoader(BaseLoader):
 
 
 # ===========================================================================
-# 6. Marker — datalab.to, high-quality Markdown from any PDF
+# 6. Marker — datalab.to, Markdown chất lượng cao từ mọi PDF
 # ===========================================================================
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -731,36 +731,26 @@ def repair_marker_math(markdown: str) -> tuple[str, int]:
 
 class MarkerPDFLoader(BaseLoader):
     """
-    PDF extraction via Marker (datalab.to / Vik Paruchuri, 2024).
+    Trích PDF bằng Marker (datalab.to / Vik Paruchuri, 2024).
 
-    Marker chuyển đổi PDF (kể cả scan) thành Markdown chất lượng cao.
-    Sử dụng kết hợp nhiều model:
-    - Surya OCR     : nhận dạng văn bản đa ngôn ngữ
-    - Layout model  : phát hiện cấu trúc trang
-    - Table model   : trích xuất bảng → Markdown
-    - Formula model : chuyển công thức → LaTeX
+    Marker chuyển PDF, kể cả bản scan, thành Markdown chất lượng cao bằng cách
+    ghép nhiều model: Surya OCR (đa ngôn ngữ), model layout (cấu trúc trang),
+    model bảng (→ Markdown), model công thức (→ LaTeX).
 
-    Điểm mạnh:
-    - Chạy hoàn toàn LOCAL, không cần API
-    - Xử lý tốt cả PDF text layer lẫn PDF scan
-    - Hỗ trợ bảng, công thức toán học, code blocks
-    - Output Markdown sạch, có cấu trúc heading rõ ràng
-    - Hỗ trợ 90+ ngôn ngữ (kế thừa từ Surya)
+    Điểm mạnh: chạy hoàn toàn cục bộ, không cần API; xử lý tốt cả PDF có text
+    layer lẫn PDF scan; giữ được bảng, công thức và code block; Markdown đầu ra
+    sạch, heading rõ ràng; hỗ trợ 90+ ngôn ngữ nhờ Surya.
 
-    Cần cài:
-        pip install marker-pdf
-        # Lần đầu chạy sẽ tải model ~2-4 GB
+    Cần cài ``pip install marker-pdf``; lần chạy đầu tải model khoảng 2–4 GB.
 
-    Tham số:
-        langs    : Danh sách ngôn ngữ ISO 639-1 cho OCR.
-                   None → tự động detect ngôn ngữ.
-        device   : "cpu" | "cuda" | "mps" (Apple Silicon)
-        workers  : Số worker process (mặc định 1).
+    Tham số
+    -------
+    langs   : Danh sách mã ngôn ngữ ISO 639-1 cho OCR; None để tự nhận diện.
+    device  : "cpu" | "cuda" | "mps" (Apple Silicon)
+    workers : Số tiến trình worker, mặc định 1.
 
-    Lưu ý về hiệu năng:
-        - CPU: ~30-60s / trang
-        - GPU: ~2-5s / trang
-        - Phù hợp cho offline batch processing, không phải real-time.
+    Hiệu năng: CPU khoảng 30–60 giây/trang, GPU khoảng 2–5 giây/trang. Hợp với
+    xử lý theo lô ngoại tuyến, không hợp thời gian thực.
     """
 
     _LANG_MAP = {"vi": ["vi"], "en": ["en"], "both": ["vi", "en"]}
@@ -800,7 +790,7 @@ class MarkerPDFLoader(BaseLoader):
         logger.info("MarkerPDFLoader: device='%s', describe_images=%s", self.device, describe_images)
 
     # ------------------------------------------------------------------
-    # Helpers
+    # Hàm phụ trợ
     # ------------------------------------------------------------------
 
     def _describe_image_file(self, img_path: Path) -> str:
@@ -825,7 +815,7 @@ class MarkerPDFLoader(BaseLoader):
         Thay thế mọi `![alt](path)` trong Markdown bằng mô tả VLM.
         Trả về (markdown_mới, image_refs).
 
-        image_refs: list of {
+        image_refs là list các dict dạng {
             "figure_index": int,   # thứ tự ảnh trong document (bắt đầu từ 1)
             "path":         str,   # đường dẫn tuyệt đối đến file ảnh gốc
             "description":  str,   # mô tả VLM
@@ -881,7 +871,7 @@ class MarkerPDFLoader(BaseLoader):
         return new_markdown, image_refs
 
     # ------------------------------------------------------------------
-    # Main load
+    # Hàm load chính
     # ------------------------------------------------------------------
 
     def load(self, file_path: str) -> list[Document]:
@@ -1035,40 +1025,40 @@ def _check_java() -> None:
 
 class OpenDataLoaderPDFLoader(BaseLoader):
     """
-    Load a PDF file using opendataloader-pdf, return list[Document].
+    Trích PDF bằng opendataloader-pdf, trả về list[Document].
 
-    Follows the same BaseLoader contract as PyPDFLoader, MarkerPDFLoader, etc.:
+    Theo đúng hợp đồng BaseLoader như PyPDFLoader, MarkerPDFLoader:
         loader = OpenDataLoaderPDFLoader(language="both", hybrid="docling-fast")
-        docs   = loader.load("report.pdf")    # -> list[Document]
+        docs   = loader.load("report.pdf")
 
-    Two modes
-    ---------
-      fast (default) : Java local, deterministic, ~0.05s/page, accuracy 0.72
-      hybrid         : AI backend cho complex pages, ~0.43s/page, accuracy 0.90 (#1 benchmark)
+    Hai chế độ
+    ----------
+      fast (mặc định) : Java cục bộ, tất định, ~0.05 giây/trang, độ chính xác 0.72
+      hybrid          : có backend AI cho trang phức tạp, ~0.43 giây/trang, 0.90
 
-    Benchmark (200 real-world PDFs):
-      opendataloader [hybrid]  overall 0.90  table 0.93  heading 0.83  ← #1
-      opendataloader [fast]    overall 0.72  table 0.49  heading 0.76
-      docling                  overall 0.86  table 0.89  heading 0.80
-      marker                   overall 0.83  table 0.81  heading 0.80
+    Benchmark trên 200 PDF thực tế (tổng thể · bảng · heading):
+      opendataloader [hybrid]  0.90 · 0.93 · 0.83  ← hạng nhất
+      opendataloader [fast]    0.72 · 0.49 · 0.76
+      docling                  0.86 · 0.89 · 0.80
+      marker                   0.83 · 0.81 · 0.80
 
-    Install
+    Cài đặt
     -------
-      pip install opendataloader-pdf          (Java 11+ required)
-      pip install "opendataloader-pdf[hybrid]"  (for hybrid mode)
+      pip install opendataloader-pdf             (cần Java 11+)
+      pip install "opendataloader-pdf[hybrid]"   (cho chế độ hybrid)
 
-    Hybrid server (Terminal 1 — cần chạy trước khi dùng hybrid mode):
+    Chế độ hybrid cần chạy server nền trước ở một terminal riêng:
       opendataloader-pdf-hybrid --port 5002
-      # Với PDF scan / tiếng Việt:
+      # với PDF scan / tiếng Việt:
       opendataloader-pdf-hybrid --port 5002 --force-ocr --ocr-lang "vi,en"
 
-    Parameters
-    ----------
-    language        : Corpus language ("vi" | "en" | "both").
-    hybrid          : None → fast local mode (no GPU, no server needed).
-                      "docling-fast" → hybrid AI mode (#1 benchmark accuracy).
-    hybrid_port     : Port of the hybrid backend server. Default: 5002.
-    use_struct_tree : Use native PDF structure tags (Tagged PDF). Default: False.
+    Tham số
+    -------
+    language        : Ngôn ngữ corpus ("vi" | "en" | "both").
+    hybrid          : None → chế độ fast cục bộ, không cần GPU hay server.
+                      "docling-fast" → chế độ hybrid, chính xác cao nhất.
+    hybrid_port     : Cổng của server hybrid, mặc định 5002.
+    use_struct_tree : Dùng thẻ cấu trúc sẵn có của Tagged PDF, mặc định False.
     """
 
     def __init__(
@@ -1105,8 +1095,8 @@ class OpenDataLoaderPDFLoader(BaseLoader):
                 "(Java 11+ required)"
             )
         except Exception as exc:
-            # Catch import-time errors (JVM init failure, missing native libs on Windows)
-            # and surface the real cause instead of silently routing to the fallback.
+            # Bắt lỗi lúc import (JVM không khởi động được, thiếu native lib trên
+            # Windows) để báo đúng nguyên nhân, thay vì lặng lẽ rơi về loader dự phòng.
             raise RuntimeError(
                 f"opendataloader_pdf đã được cài nhưng không import được.\n"
                 f"Nguyên nhân: {exc}\n\n"

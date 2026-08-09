@@ -1,31 +1,27 @@
 """
 chunking/format_aware.py
 ========================
-Format-aware chunking -- uses document structure to find natural boundaries.
+Cắt theo cấu trúc tài liệu để tìm ranh giới tự nhiên.
 
-Three sub-strategies selected automatically (or explicitly):
+Ba nhánh con, chọn tự động hoặc chỉ định thẳng:
 
-  markdown : Splits on Markdown headings (# / ## / ###).
-             Heading path stored in metadata for rich filtering.
+  markdown : Cắt theo heading Markdown (# / ## / ###); đường dẫn heading được
+             lưu vào metadata để lọc về sau.
+  code     : Cắt theo AST qua enum Language của LangChain; ranh giới luôn rơi
+             giữa các định nghĩa ở mức ngoài cùng.
+  html     : Cắt theo thẻ ngữ nghĩa <h1>…<h6>.
 
-  code     : AST-based splitting (LangChain Language enum).
-             Boundaries always fall between top-level definitions.
+Cắt tiếp lần hai (split_large_sections)
+---------------------------------------
+Mặc định giữ nguyên ranh giới section: một section 5000 ký tự vẫn là một chunk,
+bất kể chunk_size.
 
-  html     : Splits on semantic HTML tags (<h1> to <h6>).
-             Boilerplate tags already stripped by HtmlLoader.
+Bật ``split_large_sections=True`` để chạy thêm một lượt
+RecursiveCharacterTextSplitter cho những section vượt chunk_size. Cần khi model
+embedding có context ngắn (VinAI/phobert-large 256 token, mxbai-embed-large 512).
 
-Secondary splitting (split_large_sections)
-------------------------------------------
-By default, format_aware preserves section boundaries exactly -- a section
-of 5000 chars stays as one chunk regardless of chunk_size.
-
-Set split_large_sections=True to add a second pass with
-RecursiveCharacterTextSplitter for sections that exceed chunk_size.
-Use this when your embedding model has a short context window
-(e.g. VinAI/phobert-large: 256 tokens, mxbai-embed-large: 512 tokens).
-
-Use when : source documents have clear structural markup (wikis, READMEs,
-           API docs, source code repositories, HTML pages).
+Dùng khi: tài liệu nguồn có markup rõ ràng — wiki, README, tài liệu API, mã
+nguồn, trang HTML.
 """
 
 from __future__ import annotations
@@ -35,7 +31,7 @@ from langchain_core.documents import Document
 from chunking.base import BaseChunker
 from chunking.recursive import RecursiveChunker
 
-# Maps programming_language metadata value -> LangChain Language enum value
+# Ánh xạ metadata programming_language -> tên enum Language của LangChain
 _LANG_ENUM_MAP = {
     "python":     "PYTHON",
     "javascript": "JS",
@@ -52,19 +48,19 @@ _LANG_ENUM_MAP = {
 
 class FormatAwareChunker(BaseChunker):
     """
-    Split documents according to their structural format.
+    Cắt document theo định dạng cấu trúc của nó.
 
-    Parameters
-    ----------
-    format_type          : "auto" | "markdown" | "code" | "html"
-                           "auto" inspects metadata["file_type"] and
-                           metadata["programming_language"] to decide.
-    chunk_size           : Max characters per chunk for code sub-strategy,
-                           and upper bound when split_large_sections=True.
-    chunk_overlap        : Overlap in characters (code + secondary splitting).
-    split_large_sections : If True, sections exceeding chunk_size are split
-                           further with RecursiveCharacterTextSplitter.
-                           Default False -- preserves structural boundaries.
+    Tham số
+    -------
+    format_type          : "auto" | "markdown" | "code" | "html". Chế độ "auto"
+                           dựa vào metadata ``file_type`` và
+                           ``programming_language`` để quyết định.
+    chunk_size           : Số ký tự tối đa mỗi chunk ở nhánh code, đồng thời là
+                           trần khi bật split_large_sections.
+    chunk_overlap        : Số ký tự chồng lấn (nhánh code và lượt cắt thứ hai).
+    split_large_sections : True thì section vượt chunk_size được cắt tiếp bằng
+                           RecursiveCharacterTextSplitter. Mặc định False để giữ
+                           nguyên ranh giới cấu trúc.
     """
 
     def __init__(
@@ -94,7 +90,7 @@ class FormatAwareChunker(BaseChunker):
         return self._enrich(all_chunks)
 
     # ------------------------------------------------------------------
-    # Format detection
+    # Nhận diện định dạng
     # ------------------------------------------------------------------
     def _detect(self, doc: Document) -> str:
         if self.format_type != "auto":
@@ -111,7 +107,7 @@ class FormatAwareChunker(BaseChunker):
         return "text"
 
     # ------------------------------------------------------------------
-    # Secondary splitting helper
+    # Helper cho lượt cắt thứ hai
     # ------------------------------------------------------------------
     def _maybe_split_large(
         self,
@@ -119,14 +115,14 @@ class FormatAwareChunker(BaseChunker):
         extra_meta: dict,
     ) -> list[Document]:
         """
-        split_large_sections=False (default):
-            Giu nguyen tung section, bat ke kich thuoc.
-            Phu hop khi embedding model co ctx window lon (bge-m3: 8192,
-            Qwen3: 32K) hoac khi muon chunk khop chinh xac voi cau truc heading.
+        Cắt tiếp các section quá lớn, tuỳ theo ``split_large_sections``.
 
-        split_large_sections=True:
-            Section vuot chunk_size bi chia nho them voi RecursiveCharacterTextSplitter.
-            Dung khi model co ctx window ngan (phobert: 256, mxbai: 512 tokens).
+        False (mặc định) : giữ nguyên từng section bất kể kích thước. Hợp khi
+            model embedding có context lớn (bge-m3 8192, Qwen3 32K) hoặc khi
+            muốn chunk khớp đúng cấu trúc heading.
+        True : section vượt chunk_size được chia nhỏ tiếp bằng
+            RecursiveCharacterTextSplitter. Dùng khi model có context ngắn
+            (phobert 256, mxbai 512 token).
         """
         if not self.split_large_sections:
             return [
@@ -175,7 +171,7 @@ class FormatAwareChunker(BaseChunker):
         return self._maybe_split_large(sections, {"format": "markdown"})
 
     # ------------------------------------------------------------------
-    # Code (AST-based via LangChain Language enum)
+    # Code — cắt theo AST qua enum Language của LangChain
     # ------------------------------------------------------------------
     def _split_code(self, doc: Document) -> list[Document]:
         from langchain_text_splitters import Language, RecursiveCharacterTextSplitter

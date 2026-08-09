@@ -186,7 +186,7 @@ EMBEDDING_PROVIDER_META: dict[str, dict] = {
     },
 }
 
-# ── Vector DB provider metadata ─────────────────────────────────────────────
+# ── Mô tả các provider Vector DB ────────────────────────────────────────────
 VECTOR_DB_PROVIDER_META: dict[str, dict] = {
     "faiss": {
         "icon": "💾", "label": "FAISS",

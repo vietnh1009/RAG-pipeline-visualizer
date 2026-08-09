@@ -1,24 +1,22 @@
 """
 chunking/semantic.py
 ====================
-Semantic chunking — detects topic boundaries via embedding similarity.
+Chunking ngữ nghĩa — phát hiện ranh giới chủ đề bằng độ tương đồng embedding.
 
-Each sentence is embedded; when cosine similarity between consecutive
-sentences drops sharply (past a percentile threshold), a chunk boundary
-is inserted.  Chunks are therefore grouped by topic, not by character count.
+Từng câu được embed; khi cosine similarity giữa hai câu liên tiếp tụt mạnh
+(vượt ngưỡng phân vị) thì chèn một ranh giới chunk. Nhờ vậy chunk được gom theo
+chủ đề chứ không theo số ký tự.
 
-Use when : documents cover multiple unrelated topics; topic shifts need
-           to be discovered automatically.
+Dùng khi: tài liệu trộn nhiều chủ đề rời nhau, cần tự động tìm chỗ chuyển ý.
 
-Supported embedding providers
-------------------------------
-API-based  : OpenAI, Google (Gemini), Cohere, Voyage AI, Jina AI
-Self-hosted: Ollama (Qwen3-Embedding), HuggingFace sentence-transformers
-             (BGE-M3, GTE-Multilingual, Multilingual-E5)
+Provider embedding hỗ trợ
+-------------------------
+Qua API : OpenAI, Google (Gemini), Cohere, Voyage AI, Jina AI
+Tự dựng : Ollama (Qwen3-Embedding), HuggingFace sentence-transformers
+          (BGE-M3, GTE-Multilingual, Multilingual-E5)
 
-Note: the embedding model used for chunking and the one used for retrieval
-should be the *same* model — cosine similarity boundaries only make sense
-within a consistent vector space.
+Lưu ý: nên dùng CÙNG một model embedding cho chunking và cho retrieval —
+ranh giới theo cosine chỉ có nghĩa trong một không gian vector nhất quán.
 """
 
 from __future__ import annotations
@@ -29,8 +27,8 @@ from langchain_core.documents import Document
 from chunking.base import BaseChunker
 
 
-# ── Embedding model registry ──────────────────────────────────────────────────
-# Keys are the exact model identifiers passed to each provider's API/SDK.
+# ── Danh mục model embedding ──────────────────────────────────────────────────
+# Key chính là định danh model truyền thẳng vào API/SDK của từng provider.
 EMBEDDING_MODELS: dict[str, dict] = {
 
     # ── API-based ─────────────────────────────────────────────────────────────
@@ -176,16 +174,17 @@ PROVIDER_GROUPS: dict[str, list[str]] = {
 
 class SemanticChunker(BaseChunker):
     """
-    Split documents at topic-shift boundaries detected via sentence embeddings.
+    Cắt document tại chỗ chuyển chủ đề, phát hiện qua embedding từng câu.
 
-    Uses LangChain's SemanticChunker (Greg Kamradt implementation).
+    Dùng SemanticChunker của LangChain (bản cài đặt của Greg Kamradt).
 
-    Parameters
-    ----------
-    embedding_model_name : Model identifier — key in EMBEDDING_MODELS registry.
+    Tham số
+    -------
+    embedding_model_name : Định danh model — key trong ``EMBEDDING_MODELS``.
     breakpoint_type      : "percentile" | "standard_deviation" | "interquartile"
-    breakpoint_threshold : Numeric threshold for the chosen breakpoint type.
-    ollama_base_url      : Ollama URL (OpenAI-compat format, /v1 stripped internally).
+    breakpoint_threshold : Ngưỡng số ứng với kiểu breakpoint đã chọn.
+    ollama_base_url      : URL Ollama dạng OpenAI-compat; hậu tố /v1 được bỏ
+                           bên trong khi cần.
     """
 
     def __init__(
@@ -193,7 +192,7 @@ class SemanticChunker(BaseChunker):
         embedding_model_name: str   = "BAAI/bge-m3",
         breakpoint_type:      str   = "percentile",
         breakpoint_threshold: float = 95.0,
-        chunk_size:           int   = 1000,   # inherited but unused by SemanticChunker
+        chunk_size:           int   = 1000,   # kế thừa từ BaseChunker, lớp này không dùng
         chunk_overlap:        int   = 0,
         ollama_base_url:      str   = "http://localhost:11434/v1",
     ):
@@ -252,7 +251,7 @@ class SemanticChunker(BaseChunker):
         return HuggingFaceEmbeddings(model_name=self.embedding_model_name)
 
     # ------------------------------------------------------------------
-    # Main split
+    # Cắt chính
     # ------------------------------------------------------------------
 
     def split(self, docs: list[Document]) -> list[Document]:
@@ -294,7 +293,7 @@ class SemanticChunker(BaseChunker):
             raise
 
 
-# ── Helper ────────────────────────────────────────────────────────────────────
+# ── Hàm phụ trợ ───────────────────────────────────────────────────────────────
 
 def _is_model_not_found_error(exc: Exception) -> bool:
     """

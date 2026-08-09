@@ -1,15 +1,14 @@
 """
 chunking/token_based.py
 =======================
-Token-based chunking — counts tokens instead of characters.
+Cắt theo token thay vì theo ký tự.
 
-Essential for multilingual corpora (especially Vietnamese) because
-characters-per-token ratios vary significantly across languages.
-A chunk of 500 Vietnamese characters may be 600-700 tokens with BPE
-tokenisers, silently exceeding embedding model limits.
+Rất quan trọng với corpus đa ngôn ngữ, nhất là tiếng Việt, vì tỉ lệ ký tự trên
+token khác nhau nhiều giữa các ngôn ngữ: một chunk 500 ký tự tiếng Việt có thể
+thành 600–700 token với tokenizer BPE, âm thầm vượt giới hạn của model embedding.
 
-Use when : multilingual pipelines, strict token-limit compliance,
-           production systems where silent truncation is unacceptable.
+Dùng khi: pipeline đa ngôn ngữ, cần tuân thủ chặt giới hạn token, hoặc hệ thống
+production không chấp nhận việc bị cắt cụt trong im lặng.
 """
 
 from __future__ import annotations
@@ -22,15 +21,14 @@ from chunking.base import BaseChunker
 
 class TokenChunker(BaseChunker):
     """
-    Split documents by token count using tiktoken.
+    Cắt document theo số token, dùng tiktoken.
 
-    Parameters
-    ----------
-    chunk_size     : Number of tokens per chunk.
-    chunk_overlap  : Overlap in tokens between consecutive chunks.
-    encoding_name  : tiktoken encoding to use.
-                     "cl100k_base" for OpenAI models (GPT-4, text-embedding-3-*).
-                     "p50k_base"   for older GPT-3 models.
+    Tham số
+    -------
+    chunk_size    : Số token mỗi chunk.
+    chunk_overlap : Số token chồng lấn giữa hai chunk liên tiếp.
+    encoding_name : Bộ mã tiktoken — "cl100k_base" cho model OpenAI đời mới
+                    (GPT-4, text-embedding-3-*), "p50k_base" cho GPT-3 cũ.
     """
 
     def __init__(
