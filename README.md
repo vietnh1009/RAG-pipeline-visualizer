@@ -42,8 +42,6 @@
 9. [Demo End-to-End: PDF phức tạp → Câu trả lời có trích dẫn](#9-demo-end-to-end)
 10. [Pipeline Cache](#10-pipeline-cache)
 11. [config.yaml](#11-configyaml)
-12. [Troubleshooting](#12-troubleshooting)
-13. [Kiểm thử tự động (smoke test)](#13-kiểm-thử-tự-động-smoke-test)
 
 ---
 
@@ -277,7 +275,7 @@ uv pip check
 
 # 3. pipeline chạy thật?
 python scripts\smoke_test.py --pdf data\test.pdf --mode single --offline
-#    → không có dòng FAIL nào (SKIP là bình thường — xem mục 12)
+#    → không có dòng FAIL nào (SKIP chỉ là thiếu thư viện/API key, không phải lỗi)
 ```
 
 Nếu lệnh 1 in `3.13` hoặc in đường dẫn tới `miniconda3` → bạn đang ở nhầm môi trường.
@@ -316,31 +314,21 @@ Chỉ cần khi dùng đúng option tương ứng — không dùng option đó t
 | Ollama server | embedding / generation local | `ollama list` |
 | NLTK `punkt_tab` | chunking `sentence_aware` | tự fallback nếu thiếu |
 
-#### GPU (tuỳ chọn, nhưng đáng làm)
+#### GPU (tuỳ chọn)
 
 Những phần sau nhanh lên nhiều lần khi có GPU NVIDIA: `sentence-transformers` (embedding
 HuggingFace), cross-encoder reranker (post-retrieval), `marker`/Surya OCR (loader), SPLADE
 sparse embedding. Nếu bạn chỉ dùng embedding qua API (OpenAI/Cohere) và loader
 `pypdf`/`pymupdf` thì **không cần GPU**.
 
-**Vì sao không pin `torch` trong `requirements.txt`?** Vì `pip install torch` cho kết quả
-**khác nhau theo hệ điều hành**:
 
-| OS | `pip install torch` từ PyPI cho ra |
-|---|---|
-| Linux | bản CUDA — dùng được GPU |
-| **Windows** | **bản CPU-only** ⚠️ GPU nằm im, không báo lỗi |
-| macOS | bản CPU/MPS (đúng — macOS không có CUDA) |
-
-Thêm nữa, bản CUDA trên PyPI được chốt ở **một** phiên bản CUDA cố định — driver cũ hơn sẽ
-không chạy được. Vì thế torch **luôn là bước thủ công cuối cùng**, và cũng bị loại khỏi
-`requirements.lock.txt`:
+Cài đặt pytorch. Đây **luôn là bước thủ công cuối cùng**:
 
 ```powershell
 python scripts\install_torch.py --check                # xem đang cài bản nào
 python scripts\install_torch.py --apply                # tự dò driver, cài đúng bản
 python scripts\install_torch.py --apply --force-cpu    # ép bản CPU (nhẹ hơn ~2 GB)
-python scripts\install_torch.py --apply --cuda cu121   # ép kênh CUDA cụ thể (driver cũ)
+python scripts\install_torch.py --apply --cuda cu121   # ép phiên bản CUDA cụ thể (driver cũ)
 ```
 
 Script đọc `nvidia-smi` để biết driver hỗ trợ CUDA tới đâu, rồi chọn wheel index tương ứng.
@@ -910,242 +898,6 @@ query_pipeline:
     temperature: 0.0
     max_tokens: 2048
     streaming: true
-```
-
----
-
-## 12. Troubleshooting
-
-### Lỗi môi trường / cài đặt
-
-> 🔎 **Trước khi debug code, hãy loại trừ môi trường.** Phần lớn lỗi "khó hiểu" của project
-> này là do chạy sai Python. Chạy 3 lệnh kiểm tra ở **mục 4.2** trước.
-
-| Triệu chứng | Nguyên nhân / cách sửa |
-|---|---|
-| `sys.version` in ra 3.13, hoặc `sys.executable` trỏ tới `miniconda3` | Đang ở conda `base` chứ không phải `.venv` → `.\.venv\Scripts\Activate.ps1`, hoặc dùng `uv run` (mục 4.1) |
-| pip cố build `chromadb` / `faiss-cpu` từ source | Đang dùng Python 3.13 → tạo lại env trên 3.11 (mục 4.1) |
-| `UnicodeEncodeError: 'charmap' codec can't encode...` | Console Windows là cp1252, script in tiếng Việt. Đã sửa cho `install_torch.py` và `smoke_test.py`. Script mới phải copy 6 dòng `sys.stdout.reconfigure(encoding="utf-8")` ở đầu file |
-| `TypeError: button() got an unexpected keyword argument 'width'` | Streamlit < 1.49 → `uv pip install -U "streamlit>=1.49,<2"` |
-| Lỗi ABI kiểu `numpy.dtype size changed` | Có gì đó nâng numpy lên 2.x → `uv pip install numpy==1.26.4` |
-| `unstructured-client ... requires pypdf>=6.2.0` | Xung đột đã biết (`unstructured-client 0.42.8` đòi `pypdf>=6.2.0` trong khi project pin `pypdf==5.1.0`) → `uv pip install unstructured-client==0.42.0` |
-| `uv pip check` báo xung đột sau khi thêm gói | Gói mới kéo theo phiên bản không tương thích → gỡ ra, hoặc pin lại; **đừng** chạy `freeze_lock.py` khi đang có xung đột |
-| Cài xong vẫn thiếu `faiss` / `pymupdf` / `nltk` | Cài nhầm vào env khác. Kiểm tra `sys.executable` rồi cài lại từ `requirements.lock.txt` |
-
----
-
-### `ModuleNotFoundError: No module named 'marker'`
-
-```bash
-pip install marker-pdf==1.6.2
-```
-
-Marker cần tải model (~1.5 GB) lần đầu chạy — đảm bảo có kết nối internet.
-
----
-
-### `OPENAI_API_KEY not found` hoặc `AuthenticationError`
-
-1. Kiểm tra file `.env` tồn tại ở thư mục gốc project.
-2. Đảm bảo format đúng: `OPENAI_API_KEY=sk-proj-...` *(không có dấu nháy)*.
-3. Đảm bảo chạy `streamlit run app.py` từ đúng thư mục gốc.
-
----
-
-### Ollama: `Connection refused` hoặc `ConnectError`
-
-```bash
-# Khởi động Ollama server
-ollama serve
-
-# Kiểm tra các model đã có
-ollama list
-
-# Pull model nếu chưa có
-ollama pull qwen2.5:7b
-```
-
----
-
-### `faiss` import error trên macOS (Apple Silicon)
-
-```bash
-pip uninstall faiss-cpu
-pip install faiss-cpu==1.9.0.post1 --no-cache-dir
-```
-
-Nếu vẫn lỗi, thử cài qua conda:
-
-```bash
-conda install -c conda-forge faiss-cpu
-```
-
----
-
-### Chunking tạo ra quá nhiều chunk ngắn (< 50 ký tự)
-
-- Tăng `chunk_size` lên 1000–1500.
-- Kiểm tra loader: PDF có nhiều header/footer thừa không? Thử dùng `marker` hoặc `docling` để output Markdown sạch hơn.
-- Bật option **"Bỏ qua chunk quá ngắn"** trong cài đặt chunking.
-
----
-
-### Cosine similarity heatmap toàn màu nhạt (similarity thấp)
-
-Embedding model không phù hợp với ngôn ngữ trong tài liệu. Thử đổi sang:
-
-- `BAAI/bge-m3` (HuggingFace, multilingual)
-- `embed-multilingual-v3.0` (Cohere)
-- `text-embedding-3-large` (OpenAI, chất lượng cao hơn 3-small)
-
----
-
-### Câu trả lời bị hallucinate (bịa thông tin không có trong tài liệu)
-
-1. Mở tab **Retrieval** — kiểm tra xem các chunk retrieved có thực sự liên quan không.
-2. Tăng `top_k` và bật **cross-encoder reranker**.
-3. Đổi prompt template sang `citation` — LLM phải trích dẫn `[NGUỒN N]` cho mỗi claim.
-4. Đặt `temperature = 0.0`.
-5. Thêm rule vào system prompt: `"Chỉ trả lời dựa trên các đoạn context được cung cấp. Nếu không tìm thấy thông tin, hãy nói rõ."`
-
----
-
-### Lỗi `torch` khi cài marker-pdf trên Windows
-
-Marker cần `torch`. Cài PyTorch **trước**, rồi mới cài marker:
-
-```bash
-python scripts/install_torch.py --apply     # tự dò GPU/CUDA, xem mục 4.3
-pip install marker-pdf==1.6.2
-```
-
-Cài thủ công nếu muốn:
-
-```bash
-# Không có GPU NVIDIA
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-
-# Có GPU — thay cu124 bằng bản phù hợp driver (chạy `nvidia-smi` để xem)
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
-```
-
-> ⚠️ Đừng dùng cú pháp cũ `-f https://download.pytorch.org/whl/torch_stable.html`
-> — PyTorch đã bỏ trang này, giờ dùng `--index-url`.
-
-> 💡 Trên Windows, `pip install torch` (không có `--index-url`) cho **bản CPU-only**.
-> Marker vẫn chạy nhưng chậm hơn nhiều lần.
-
----
-
-### Streamlit báo lỗi upload file quá lớn
-
-```bash
-streamlit run app.py --server.maxUploadSize 500
-```
-
-Hoặc tạo file `.streamlit/config.toml`:
-
-```toml
-[server]
-maxUploadSize = 500
-```
-
----
-
-### Loader chạy xong nhưng "0 ký tự" / chunking ra 0 chunk
-
-PDF của bạn **không có text layer**: chữ đã bị outline hoá thành đường vector,
-hoặc file là ảnh scan. `pypdf` / `pymupdf` / `pdfplumber` sẽ trả về rỗng **mà không báo lỗi**.
-
-Kiểm tra:
-
-```bash
-python -c "import pdfplumber; p=pdfplumber.open('f.pdf').pages[0]; print('chars:',len(p.chars),'curves:',len(p.curves))"
-```
-
-`chars: 0` kèm `curves` lớn → đúng trường hợp này. Cách xử lý: đổi sang `marker`,
-`docling`, `unstructured`, hoặc `opendataloader` ở hybrid mode với `--force-ocr`.
-
----
-
-### `LookupError: punkt_tab not found` khi dùng `sentence_aware`
-
-NLTK cần tải data lần đầu, và sẽ hỏng nếu máy không có mạng:
-
-```bash
-python -c "import nltk; nltk.download('punkt'); nltk.download('punkt_tab')"
-```
-
-Nếu không tải được, `sentence_aware` tự fallback sang underthesea → NLTK → regex.
-
----
-
-### `opendataloader` báo lỗi liên quan đến Java
-
-```bash
-java -version     # phải là 11 trở lên
-```
-
-Chưa có thì tải tại https://adoptium.net/ (OpenJDK 17 là bản đã kiểm chứng).
-
----
-
-### Index Vector DB vỡ khi corpus lớn (hàng chục nghìn chunk)
-
-`FAISS.from_documents()` embed **toàn bộ chunk trong một lần gọi** — với corpus lớn
-qua API sẽ vượt payload/rate limit. Dùng đường CLI có ingest theo batch + retry:
-
-```bash
-python -m pipeline.indexing_pipeline --source ./data --config config.yaml
-```
-
-Chỉnh `indexing.vector_db.batch_size` trong `config.yaml` (mặc định 500 khi > 2.000 chunk).
-
----
-
-## 13. Kiểm thử tự động (smoke test)
-
-Repo có sẵn bộ test chạy thật từng option và tổ hợp option của indexing stage,
-để phát hiện lỗi **trước khi** người dùng gặp phải.
-
-```bash
-# 1) Test riêng lẻ từng option — luôn chạy cái này trước (~26 test)
-python scripts/smoke_test.py --pdf data/sample.pdf --mode single
-
-# 2) Test cặp liền kề — bắt lỗi tích hợp, chi phí O(n²) thay vì O(n⁴)
-python scripts/smoke_test.py --pdf data/sample.pdf --mode pairs
-
-# 3) Toàn bộ tích Descartes — chỉ chạy khi 2 bước trên đã xanh
-python scripts/smoke_test.py --pdf data/sample.pdf --mode matrix --max-tests 400
-
-# Chỉ option chạy local, không gọi API trả tiền
-python scripts/smoke_test.py --pdf data/sample.pdf --mode pairs --offline
-```
-
-**Vì sao không chạy thẳng cả 360 tổ hợp?** Vì phần lớn lỗi thực tế là lỗi *cặp*
-(loader A tạo output mà chunker B không xử lý được), chứ không phải lỗi bậc bốn.
-Chế độ `pairs` bắt được ~95% lỗi tích hợp với vài chục test thay vì vài trăm.
-Chạy `matrix` khi bạn muốn chắc chắn tuyệt đối trước khi release.
-
-**Đọc kết quả:**
-
-| Trạng thái | Ý nghĩa |
-|---|---|
-| ✅ `PASS` | Chạy xong, output hợp lệ |
-| ⚠️ `WARN` | Chạy xong nhưng output đáng ngờ — 0 document, 0 chunk, hoặc vector toàn 0 |
-| ⏭️ `SKIP` | Thiếu thư viện / API key / Java. **Không phải lỗi** — chỉ là môi trường chưa đủ |
-| ❌ `FAIL` | Ném exception. Đây là thứ cần sửa |
-
-Script tự đọc registry từ chính source code (`chunking.factory._REGISTRY`,
-`loader.directory_loader.PDFStrategy`, ...) nên khi bạn thêm option mới, test tự
-bắt được mà không phải sửa gì. Kết quả ghi ra `smoke_report.md` và `smoke_report.json`.
-
-**Dùng trong CI (GitHub Actions):**
-
-```yaml
-- run: pip install -r requirements.lock.txt
-- run: python scripts/smoke_test.py --pdf data/sample.pdf --mode pairs --offline
-  # exit code 1 nếu có FAIL → CI đỏ
 ```
 
 ---
