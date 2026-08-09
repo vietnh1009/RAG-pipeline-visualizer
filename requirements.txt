@@ -69,7 +69,7 @@ fastembed==0.4.2
 #
 #     python scripts/install_torch.py --apply
 #
-# Script tự dò driver và chọn đúng bản. Chi tiết: README mục 4.6
+# Script tự dò driver và chọn đúng bản. Chi tiết: README mục 4.4
 
 # ── VECTOR DB (mặc định) ─────────────────────────────────────────────────────
 chromadb==0.6.3
