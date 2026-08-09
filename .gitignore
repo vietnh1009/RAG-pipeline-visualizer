@@ -134,9 +134,9 @@ __pycache__/
 .venv/
 venv/
 
+# Bản sao lưu trước khi thay đổi lớn
 backups/
 *.bak
-
 
 # Tài liệu đầu vào: không đẩy corpus lên repo, chỉ giữ file mẫu chuẩn cho reviewer/smoke test
 data/*
