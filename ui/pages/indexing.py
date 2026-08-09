@@ -1257,9 +1257,9 @@ hoặc định tuyến sang backend AI (hybrid mode). Trả về cả bounding b
         with st.expander("✂️ Chunking — chiến lược nào phù hợp với tôi?"):
             st.markdown("""| Strategy | Cơ chế | Best for |
 |----------|--------|---------|
-| `recursive` | Đệ quy: đoạn → dòng → câu → ký tự | Mặc định tốt nhất |
+| `format_aware` ⭐ | Markdown heading, code block, HTML | **Khuyến nghị cho hầu hết trường hợp** — kết hợp loader Marker/Docling |
+| `recursive` | Đệ quy: đoạn → dòng → câu → ký tự | Phương án lùi an toàn khi tài liệu không có cấu trúc |
 | `token_based` | Đếm BPE token | Khi embedding model có token limit chặt |
-| `format_aware` ⭐ | Markdown heading, code block, HTML | **PDF qua Marker/Docling** |
 | `sentence_aware` | Ranh giới câu (NLTK) | Q&A, FAQ, văn xuôi |
 | `semantic` | Cosine similarity | PDF nhiều chủ đề khác nhau |
 | `hierarchical` | Parent (lớn) + Child (nhỏ) | Corpus lớn, cần chính xác cao |
@@ -1269,9 +1269,9 @@ hoặc định tuyến sang backend AI (hybrid mode). Trả về cả bounding b
 """)
             if st.checkbox("🔍 Xem giải thích chi tiết — Chunking", key="detail_chunking_idx"):
                 st.markdown("""
-**🟢 `format_aware` ⭐** — Nhận diện `# Heading`, code block, HTML tag. Cắt tại ranh giới cấu trúc, không cắt giữa code. Tối ưu cho Marker/Docling output.
+**🟢 `format_aware` ⭐** — Nhận diện `# Heading`, code block, HTML tag. Cắt tại ranh giới cấu trúc, không cắt giữa code. Tối ưu cho Marker/Docling output. ⚠️ Với **text thuần** (PDF qua pypdf/pymupdf/pdfplumber) nó tự lùi về `recursive`, nên muốn dùng đúng sức thì hãy chọn loader `marker` hoặc `docling`.
 
-**🔵 `recursive`** — Chia theo thứ tự: đoạn → dòng → câu → ký tự. Không cần cài thêm thư viện phụ trợ, rất nhanh. Phù hợp khi không có yêu cầu đặc biệt.
+**🔵 `recursive`** — Chia theo thứ tự: đoạn → dòng → câu → ký tự. Không cần cài thêm thư viện phụ trợ, rất nhanh. Là phương án lùi an toàn khi tài liệu không có cấu trúc rõ ràng.
 
 **🟡 `semantic`** — Embed từng câu, cắt khi cosine similarity giảm đột ngột. Mỗi chunk = 1 chủ đề nhất quán. Chậm hơn do cần pre-embed.
 
@@ -1287,7 +1287,7 @@ hoặc định tuyến sang backend AI (hybrid mode). Trả về cả bounding b
         with st.expander("🧮 Embedding — model và provider nào phù hợp với tôi?"):
             st.markdown("""| Provider | Model | Tiếng Việt | Chi phí | Best for |
 |----------|-------|------------|---------|---------|
-| **OpenAI** | `text-embedding-3-small` ⭐ | ⭐⭐⭐ | $0.02/1M | Mặc định tốt nhất |
+| **OpenAI** ⭐ | `text-embedding-3-small` | ⭐⭐⭐ | $0.02/1M | Mặc định tốt nhất |
 | **OpenAI** | `text-embedding-3-large` | ⭐⭐⭐ | $0.13/1M | Độ chính xác cao nhất |
 | **Cohere** | `embed-multilingual-v3.0` | ⭐⭐⭐⭐ | $0.10/1M | Corpus đa ngôn ngữ |
 | **HuggingFace** | `BAAI/bge-m3` | ⭐⭐⭐⭐ | Miễn phí | Local, VI tốt |

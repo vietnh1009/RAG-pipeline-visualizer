@@ -86,4 +86,4 @@ underthesea==6.8.4
 #    Và nếu pin ở đây, nó sẽ GHI ĐÈ bản GPU bạn đã cài.
 #    Luôn cài torch ở bước CUỐI CÙNG, bằng:
 #        python scripts/install_torch.py --apply
-#    Chi tiết: README mục 4.4
+#    Chi tiết: README mục 4.3

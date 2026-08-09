@@ -29,13 +29,13 @@ FILE_TYPE_COLORS = {
 
 # Mô tả ngắn cho từng chiến lược chunking
 CHUNK_DESCRIPTIONS = {
-    "recursive":        "Cắt theo thứ tự ưu tiên: đoạn văn → dòng → câu → ký tự. Phù hợp nhất khi không có yêu cầu đặc biệt.",
+    "recursive":        "Cắt theo thứ tự ưu tiên: đoạn văn → dòng → câu → ký tự. Phương án lùi an toàn khi tài liệu không có cấu trúc rõ ràng.",
     "token_based":      "Đếm token thay vì ký tự — quan trọng với tiếng Việt & đa ngôn ngữ.",
     "sentence_aware":   "Ranh giới chunk luôn trùng với cuối câu — tốt cho FAQ, Q&A.",
     "semantic":         "Phát hiện ranh giới chủ đề qua cosine similarity — tốt cho văn bản đa chủ đề.",
     "contextual":       "LLM sinh context prefix cho mỗi chunk — cải thiện recall đáng kể (Anthropic 2024).",
     "hierarchical":     "Tạo cặp parent (lớn) + child (nhỏ) — search child, trả parent cho LLM.",
-    "format_aware":     "Cắt theo cấu trúc tài liệu: Markdown heading, AST code, HTML tag.",
+    "format_aware":     "Cắt theo cấu trúc tài liệu: Markdown heading, AST code, HTML tag — khuyến nghị cho hầu hết trường hợp; gặp text thuần thì tự lùi về recursive.",
 }
 
 # Chiến lược cần LLM (sẽ hiện cảnh báo)

@@ -5,9 +5,12 @@ Factory function và config builder cho chunking strategy.
 
 Strategies
 ----------
-  recursive      Cắt theo đoạn → dòng → câu → ký tự. Mặc định tốt nhất.
-  token_based    Đếm token (BPE). Quan trọng với tiếng Việt & embedding limit.
   format_aware   Cắt theo cấu trúc tài liệu (Markdown heading, code block, HTML).
+                 Khuyến nghị cho hầu hết trường hợp; với text thuần thì tự lùi
+                 về recursive.
+  recursive      Cắt theo đoạn → dòng → câu → ký tự. Phương án lùi an toàn khi
+                 tài liệu không có cấu trúc.
+  token_based    Đếm token (BPE). Quan trọng với tiếng Việt & embedding limit.
   sentence_aware Cắt theo ranh giới câu. Tốt cho Q&A, FAQ.
   semantic       Cắt theo cosine similarity. Tốt cho PDF nhiều chủ đề.
   hierarchical   Parent (section lớn) + child (đoạn nhỏ). Giảm hallucination.

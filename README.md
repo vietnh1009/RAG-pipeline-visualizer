@@ -34,8 +34,7 @@
 4. [Tạo môi trường & Cài đặt](#4-tạo-môi-trường--cài-đặt)
    - [4.1 Cách cài khuyến nghị: `uv` + `.venv`](#41--cách-cài-khuyến-nghị-uv--venv-trong-thư-mục-project-) ⭐
    - [4.2 Kiểm tra môi trường đã đúng chưa](#42--kiểm-tra-môi-trường-đã-đúng-chưa)
-   - [4.3 Nếu muốn giữ conda](#43--nếu-muốn-giữ-conda)
-   - [4.4 Thư viện tuỳ chọn, phụ thuộc hệ thống, GPU](#44--thư-viện-tuỳ-chọn-phụ-thuộc-hệ-thống-và-gpu)
+   - [4.3 Thư viện tuỳ chọn, phụ thuộc hệ thống, GPU](#43--thư-viện-tuỳ-chọn-phụ-thuộc-hệ-thống-và-gpu)
 5. [Cấu hình API Keys](#5-cấu-hình-api-keys)
 6. [Khởi động ứng dụng](#6-khởi-động-ứng-dụng)
 7. [Hướng dẫn sử dụng — Indexing Pipeline](#7-hướng-dẫn-sử-dụng--indexing-pipeline)
@@ -200,7 +199,7 @@ RAG-pipeline-visualizer/
 > Cách cài ở mục 4.1 **tự tải đúng Python 3.11**, nên bạn không thể cài nhầm.
 
 > 🎮 **GPU NVIDIA** — không bắt buộc. Chỉ tăng tốc `sentence-transformers`, cross-encoder
-> reranker, `marker` và SPLADE. Xem mục **4.4**.
+> reranker, `marker` và SPLADE. Xem mục **4.3**.
 
 > ☕ **Java 11+** — chỉ cần nếu dùng loader `opendataloader`. Kiểm tra: `java -version`.
 > Tải: https://adoptium.net/
@@ -213,15 +212,7 @@ RAG-pipeline-visualizer/
 
 ### 4.1 — Cách cài khuyến nghị: `uv` + `.venv` trong thư mục project ⭐
 
-`uv` là trình quản lý gói/môi trường thay cho `pip` + `venv`. Ba lý do chọn nó:
-
-- **Tự quản lý phiên bản Python.** File `.python-version` ghi `3.11`; `uv` đọc file đó và
-  **tự tải Python 3.11** nếu máy chưa có → không còn cách nào cài nhầm 3.13.
-- **`.venv` nằm ngay trong thư mục project.** VS Code / PyCharm tự nhận. Không còn câu hỏi
-  "đang ở env nào" — nguyên nhân phổ biến nhất của lỗi "hôm qua chạy được, hôm nay hỏng".
-- **Nhanh.** Cài lại toàn bộ 276 gói từ lockfile vào env trắng: **~4 phút lần đầu**
-  (243 giây đo thật trên máy này), **~2 phút các lần sau** khi cache của uv đã ấm.
-  pip cùng việc đó mất khoảng 10–15 phút.
+`uv` là trình quản lý gói/môi trường thay cho `pip` + `venv`. 
 
 #### Cài một lệnh
 
@@ -246,14 +237,9 @@ uv venv --python 3.11
 # 3. cài thư viện từ lockfile (đã khoá cả dependency gián tiếp)
 uv pip install -r requirements.lock.txt
 
-# 4. torch — LUÔN là bước cuối, LUÔN qua script này (xem mục 4.4)
+# 4. torch — LUÔN là bước cuối, LUÔN qua script này (xem mục 4.3)
 .\.venv\Scripts\python.exe scripts\install_torch.py --apply
 ```
-
-> ℹ️ **`uv venv` không kèm `pip`** (uv có resolver riêng). `install_torch.py` tự nhận ra
-> điều này và chuyển sang gọi `uv pip install --python <.venv>`, nên bước 4 vẫn chạy bình
-> thường. Nếu bạn cần `pip` trong `.venv` vì lý do khác, tạo env bằng
-> `uv venv --seed --python 3.11`.
 
 macOS / Linux:
 
@@ -299,36 +285,7 @@ Activate lại `.venv`, hoặc chạy qua `uv run` để khỏi phụ thuộc en
 
 ---
 
-### 4.3 — Nếu muốn giữ conda
-
-Env `rag_visualizer` hiện tại đang đúng — không bắt buộc phải bỏ. Nhưng phải làm cho việc
-chọn env không còn phụ thuộc trí nhớ:
-
-```jsonc
-// .vscode/settings.json — để VS Code luôn dùng đúng env
-{ "python.defaultInterpreterPath": "F:\\miniconda3\\envs\\rag_visualizer\\python.exe" }
-```
-
-```powershell
-# và luôn chạy app qua đường dẫn tuyệt đối, không dựa vào env đang active:
-F:\miniconda3\envs\rag_visualizer\python.exe -m streamlit run app.py
-```
-
-Dựng lại env conda này từ đầu:
-
-```powershell
-conda create -n rag_visualizer python=3.11 -y
-conda activate rag_visualizer
-pip install -r requirements.lock.txt
-python scripts\install_torch.py --apply
-```
-
-> Vẫn khuyến nghị chuyển sang `.venv` + `uv`: conda env nằm ngoài project là nguyên nhân
-> gốc của phần lớn các lỗi "chạy nhầm môi trường".
-
----
-
-### 4.4 — Thư viện tuỳ chọn, phụ thuộc hệ thống, và GPU
+### 4.3 — Thư viện tuỳ chọn, phụ thuộc hệ thống, và GPU
 
 #### Thư viện tuỳ chọn
 
@@ -576,13 +533,23 @@ Mở expander **"2️⃣ Chunking"** trong sidebar.
 
 | Strategy | Cơ chế | Best for |
 |----------|--------|---------|
-| `recursive` ⭐ | Cắt theo thứ tự: đoạn→dòng→câu→ký tự | **Mặc định tốt nhất cho hầu hết trường hợp** |
+| `format_aware` ⭐ | Nhận diện cấu trúc: Markdown heading, code block, HTML tag | **Khuyến nghị cho hầu hết trường hợp** — ranh giới chunk trùng ranh giới ngữ nghĩa thật (section, hàm, thẻ) thay vì cắt máy móc theo số ký tự. Kết hợp loader `marker`/`docling` |
+| `recursive` | Cắt theo thứ tự: đoạn→dòng→câu→ký tự | Phương án lùi an toàn khi tài liệu **không có cấu trúc** rõ ràng; nhanh nhất, không cần dep phụ |
 | `token_based` | Đếm BPE token (tiktoken) thay vì ký tự | Tiếng Việt, tránh silent truncation |
-| `format_aware` | Nhận diện cấu trúc: Markdown heading, code block, HTML tag | **PDF qua Marker/Docling** ← khuyến nghị kết hợp |
 | `sentence_aware` | Ranh giới chunk = cuối câu (NLTK) | FAQ, Q&A ngắn, văn học |
 | `semantic` | Phát hiện ranh giới chủ đề qua cosine similarity | Văn bản đa chủ đề |
 | `hierarchical` | Tạo cặp parent (lớn) + child (nhỏ) | Corpus lớn, cần độ chính xác cao |
 | `contextual` | LLM sinh context prefix cho mỗi chunk | Production, có LLM budget |
+
+> ⚠️ **`format_aware` chỉ phát huy khi tài liệu thực sự có markup.** Ở chế độ `format_type: auto`,
+> nó nhận diện Markdown / code / HTML; gặp **text thuần** thì tự lùi về `recursive`
+> (`chunking/format_aware.py`). PDF đọc bằng `pypdf` / `pymupdf` / `pdfplumber` cho ra text thuần,
+> nên `format_aware` sẽ cho kết quả **y hệt** `recursive` — smoke test xác nhận: cả hai đều ra
+> 65 chunk, trung bình 432 ký tự. Muốn dùng đúng sức của nó, hãy đọc PDF bằng `marker` hoặc
+> `docling` để có Markdown thật (đúng như cấu hình khuyến nghị ở [mục 9.1](#91-cấu-hình-indexing-khuyến-nghị)).
+>
+> Mặc định `split_large_sections=False`: một section 5000 ký tự vẫn là **một chunk**, bất kể
+> chunk size. Bật tuỳ chọn này nếu model embedding có context ngắn (phobert 256, mxbai 512 token).
 
 Tham số quan trọng:
 - **Chunk size**: Số ký tự tối đa mỗi chunk. Thông thường **512–1500**.
@@ -598,7 +565,7 @@ Mở expander **"3️⃣ Embedding"** trong sidebar.
 
 | Provider | Model tiêu biểu | Tiếng Việt | Chi phí | Best for |
 |----------|-----------------|-----------|---------|---------|
-| **OpenAI** | `text-embedding-3-small` ⭐ | ⭐⭐⭐ | $0.02/1M | Mặc định cân bằng nhất |
+| **OpenAI** ⭐ | `text-embedding-3-small` | ⭐⭐⭐ | $0.02/1M | Mặc định cân bằng nhất |
 | **OpenAI** | `text-embedding-3-large` | ⭐⭐⭐ | $0.13/1M | Độ chính xác tối đa |
 | **Cohere** | `embed-multilingual-v3.0` | ⭐⭐⭐⭐ | $0.10/1M | Corpus tiếng Việt + đa ngôn ngữ |
 | **HuggingFace** | `BAAI/bge-m3` | ⭐⭐⭐⭐ | Miễn phí | Local, tốt cho VI |
@@ -1048,7 +1015,7 @@ Embedding model không phù hợp với ngôn ngữ trong tài liệu. Thử đ�
 Marker cần `torch`. Cài PyTorch **trước**, rồi mới cài marker:
 
 ```bash
-python scripts/install_torch.py --apply     # tự dò GPU/CUDA, xem mục 4.4
+python scripts/install_torch.py --apply     # tự dò GPU/CUDA, xem mục 4.3
 pip install marker-pdf==1.6.2
 ```
 

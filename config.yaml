@@ -92,7 +92,7 @@ indexing:
     # Chiến lược chunking:
     #
     #   "recursive"       Cắt theo thứ tự: đoạn → dòng → câu → ký tự
-    #                     Khuyến nghị mặc định cho hầu hết trường hợp  [★]
+    #                     Phương án lùi an toàn khi tài liệu không có cấu trúc
     #
     #                     Dùng cho: prototype nhanh
     #
@@ -119,10 +119,13 @@ indexing:
     #
     #                     Tốt nhất cho knowledge base dạng fact
     #
-    #   "format_aware"    Cắt theo cấu trúc tài liệu:
+    #   "format_aware"    Cắt theo cấu trúc tài liệu:  [★ khuyến nghị]
     #                     Markdown → heading boundaries
     #                     Code     → AST function/class boundaries
     #                     HTML     → semantic tag boundaries
+    #                     ⚠️ Gặp text thuần (PDF qua pypdf/pymupdf/pdfplumber)
+    #                     thì tự lùi về "recursive" — ghép với loader marker
+    #                     hoặc docling để có Markdown thật.
     #
     #                      (section + paragraph + sentence)
     #
