@@ -1,20 +1,17 @@
 """
 pre_retrieval/query_rewriter.py
 ================================
-Query Rewriting — normalise the raw user query before retrieval.
+Query Rewriting — chuẩn hoá query thô của người dùng trước khi truy hồi.
 
-Problems fixed
---------------
-- Spelling / grammar errors      : "how dose rag work" → "how does RAG work"
-- Colloquial / spoken language   : casual phrasing → formal written language
-- Ambiguous pronouns             : "how does it work" → "how does RAG work"
-- Overly verbose queries         : long ramblings → concise, keyword-rich form
-- Vietnamese: normalises diacritics and common abbreviation patterns
+Xử lý các lỗi thường gặp:
+- Sai chính tả, sai ngữ pháp
+- Văn nói, cách diễn đạt suồng sã → văn viết
+- Đại từ mơ hồ: "nó hoạt động sao" → "RAG hoạt động sao"
+- Query lê thê → ngắn gọn, giàu từ khoá
+- Tiếng Việt: chuẩn hoá dấu và các dạng viết tắt phổ biến
 
-The rewritten query replaces the original for downstream retrieval.
-The original is always preserved in ``result.original_query``.
-
-Use when: users submit conversational, misspelled, or verbose queries.
+Query đã viết lại thay thế query gốc ở các bước sau; bản gốc luôn còn trong
+``result.original_query``.
 """
 
 from __future__ import annotations
@@ -25,11 +22,11 @@ from utils.llm import call_llm
 
 class QueryRewriter(BaseTransformer):
     """
-    Rewrite the raw user query into a cleaner, retrieval-optimised form.
+    Viết lại query thô thành dạng sạch, tối ưu cho truy hồi.
 
-    Parameters
-    ----------
-    language : "vi" | "en" | "both" — selects the prompt language.
+    Tham số
+    -------
+    language : "vi" | "en" | "both" — chọn ngôn ngữ prompt.
     """
 
     _PROMPT_EN = (

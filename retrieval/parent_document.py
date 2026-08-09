@@ -1,19 +1,17 @@
 """
 retrieval/parent_document.py
 =============================
-Parent Document Retrieval — search small child chunks, return large parents.
+Tìm ở chunk con nhỏ, trả về chunk cha lớn.
 
-Works with HierarchicalChunker which stores both levels with metadata:
-  child : chunk_level="child",  parent_id=<pid>
-  parent: chunk_level="parent", parent_id=<pid>
+Đi cùng HierarchicalChunker — bộ chunker lưu cả hai mức kèm metadata:
+  con : chunk_level="child",  parent_id=<pid>
+  cha : chunk_level="parent", parent_id=<pid>
 
-Why this improves generation quality
---------------------------------------
-- Small child chunks → precise embeddings → high retrieval recall.
-- Large parent chunks → rich context for the LLM to generate a full answer.
-- Without this, the LLM sees fragments that are missing key surrounding context.
+Vì sao chất lượng sinh tốt hơn: chunk con nhỏ cho embedding chính xác nên
+recall cao, còn chunk cha lớn cung cấp đủ ngữ cảnh để LLM viết câu trả lời trọn
+vẹn. Không có bước này, LLM chỉ thấy mảnh vụn thiếu ngữ cảnh xung quanh.
 
-Use when: corpus was indexed with HierarchicalChunker.
+Dùng khi: corpus được index bằng HierarchicalChunker.
 """
 
 from __future__ import annotations
@@ -27,13 +25,13 @@ from utils.documents import deduplicate
 
 class ParentDocumentRetriever(BaseRetriever):
     """
-    Retrieve child chunks, then fetch and return their parent chunks.
+    Truy hồi chunk con rồi lấy chunk cha tương ứng trả về.
 
-    Parameters
-    ----------
-    vector_store : Populated VectorStore containing BOTH parent and child docs.
-    top_k        : Number of parent chunks to return.
-    candidate_k  : Child chunks to retrieve before parent lookup.
+    Tham số
+    -------
+    vector_store : VectorStore chứa CẢ chunk cha lẫn chunk con.
+    top_k        : Số chunk cha trả về.
+    candidate_k  : Số chunk con lấy trước khi tra ngược lên cha.
     """
 
     def __init__(
@@ -49,7 +47,7 @@ class ParentDocumentRetriever(BaseRetriever):
         query  = result.queries[0] if result.queries else result.original_query
         filter = result.metadata_filter or {}
 
-        # Step 1: retrieve child chunks only
+        # Bước 1: chỉ truy hồi chunk con
         child_docs = self._search(
             query=query, k=self.candidate_k,
             filter={**filter, "chunk_level": "child"},
@@ -57,7 +55,7 @@ class ParentDocumentRetriever(BaseRetriever):
         if not child_docs:
             child_docs = self._search(query=query, k=self.candidate_k, filter=filter)
 
-        # Step 2: collect unique parent_ids in ranked order
+        # Bước 2: gom parent_id không trùng, giữ thứ tự xếp hạng
         parent_ids: list[str] = []
         seen: set[str]        = set()
         for doc in child_docs:
@@ -68,7 +66,7 @@ class ParentDocumentRetriever(BaseRetriever):
             if len(parent_ids) >= self.top_k:
                 break
 
-        # Step 3: fetch parent chunks by parent_id
+        # Bước 3: lấy chunk cha theo parent_id
         parent_docs: list[Document] = []
         for pid in parent_ids:
             parents = self._search(
@@ -78,7 +76,7 @@ class ParentDocumentRetriever(BaseRetriever):
             if parents:
                 parent_docs.append(parents[0])
 
-        # Fallback to child chunks if parent lookup fails
+        # Không tra được cha thì trả về chính chunk con
         if not parent_docs:
             return deduplicate(child_docs)[:self.top_k]
 

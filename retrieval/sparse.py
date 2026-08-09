@@ -1,17 +1,14 @@
 """
 retrieval/sparse.py
 ===================
-Sparse BM25 keyword retrieval.
+Truy hồi từ khoá thưa bằng BM25.
 
-BM25 matches exact terms, making it complementary to dense retrieval.
-It excels at:
-  - Proper nouns (person names, product codes, acronyms)
-  - Technical terms rare in the embedding model's training data
-  - Out-of-domain queries where dense embeddings are unreliable
+BM25 khớp đúng từ nên bổ trợ tốt cho dense. Mạnh ở:
+  - Danh từ riêng (tên người, mã sản phẩm, từ viết tắt)
+  - Thuật ngữ chuyên ngành hiếm trong dữ liệu huấn luyện của model embedding
+  - Query lệch miền, nơi embedding dense không đáng tin
 
-BM25 index is built in-memory from the ``documents`` corpus.
-
-Use when: queries contain product codes, exact names, or technical jargon.
+Index BM25 dựng trong bộ nhớ từ corpus ``documents``.
 """
 
 from __future__ import annotations
@@ -24,13 +21,13 @@ from retrieval.base import BaseRetriever
 
 class SparseRetriever(BaseRetriever):
     """
-    BM25 keyword retrieval using rank-bm25.
+    Truy hồi từ khoá BM25 bằng thư viện rank-bm25.
 
-    Parameters
-    ----------
-    vector_store : Required by the base class; not used for BM25 search.
-    documents    : Full corpus to build the BM25 index from.
-    top_k        : Number of results to return.
+    Tham số
+    -------
+    vector_store : Lớp cơ sở đòi hỏi, nhưng BM25 không dùng đến.
+    documents    : Toàn bộ corpus để dựng index BM25.
+    top_k        : Số kết quả trả về.
     """
 
     def __init__(

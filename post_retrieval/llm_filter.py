@@ -1,15 +1,14 @@
 """
 post_retrieval/llm_filter.py
 ==============================
-LLM Binary Relevance Filter — keep or drop each document with YES/NO.
+Lọc nhị phân bằng LLM — mỗi document nhận một câu trả lời CÓ/KHÔNG.
 
-Faster than ContextCompressor (binary decision, not extraction) but less
-nuanced — the entire document is kept or removed, not trimmed.
+Nhanh hơn ContextCompressor (chỉ quyết định giữ/bỏ, không trích nội dung) nhưng
+thô hơn: giữ hoặc xoá cả document chứ không cắt gọn.
 
-Fail-open: if the LLM call fails, the document is kept (not discarded).
+Fail-open: gọi LLM lỗi thì giữ document lại, không loại.
 
-Use when: retrieval occasionally returns clearly off-topic documents;
-          a quick yes/no pass is more cost-effective than full compression.
+Dùng khi: retrieval thỉnh thoảng trả về tài liệu lạc đề rõ rệt.
 """
 
 from __future__ import annotations
@@ -22,11 +21,11 @@ from utils.llm import call_llm
 
 class LLMFilter(BasePostProcessor):
     """
-    Drop documents judged irrelevant by the LLM.
+    Loại các document bị LLM đánh giá là không liên quan.
 
-    Parameters
-    ----------
-    llm_model    : LLM for filtering.
+    Tham số
+    -------
+    llm_model    : LLM dùng để lọc.
     llm_provider : "openai" | "anthropic" | "google"
     language     : "vi" | "en" | "both"
     """
@@ -63,6 +62,6 @@ class LLMFilter(BasePostProcessor):
                 if any(w in answer.upper() for w in ("YES", "CÓ", "Y")):
                     kept.append(doc)
             except Exception:
-                kept.append(doc)   # fail-open: keep on error
+                kept.append(doc)   # fail-open: lỗi thì vẫn giữ
 
         return kept

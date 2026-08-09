@@ -1,19 +1,13 @@
 """
 retrieval/sentence_window.py
 =============================
-Sentence Window Retrieval — search sentences, expand to surrounding context.
+Tìm theo câu rồi mở rộng ra các câu lân cận.
 
-Works best when chunks are very small (single sentences). After finding
-the most relevant sentence, the retriever expands to include ±window_size
-neighbouring sentences so the LLM receives sufficient context.
+Hiệu quả nhất khi chunk rất nhỏ (mỗi chunk một câu). Sau khi tìm được câu liên
+quan nhất, retriever nối thêm ±window_size câu hai bên để LLM có đủ ngữ cảnh.
 
-Requirements
-------------
-Chunks must have ``chunk_index`` and ``source`` in their metadata
-(added automatically by all BaseChunker subclasses).
-
-Use when: corpus was chunked at sentence granularity; individual sentences
-          lack context without their neighbours.
+Yêu cầu: chunk phải có ``chunk_index`` và ``source`` trong metadata — mọi lớp
+con của BaseChunker đều tự thêm sẵn.
 """
 
 from __future__ import annotations
@@ -27,14 +21,14 @@ from utils.documents import deduplicate
 
 class SentenceWindowRetriever(BaseRetriever):
     """
-    Search sentences, then expand to a ±window_size context window.
+    Tìm theo câu rồi mở rộng thành cửa sổ ±window_size câu.
 
-    Parameters
-    ----------
-    vector_store  : Populated VectorStore.
-    all_documents : Full list of documents from the index (for window expansion).
-    top_k         : Number of expanded windows to return.
-    window_size   : Sentences to include on each side of the matched sentence.
+    Tham số
+    -------
+    vector_store  : VectorStore đã nạp dữ liệu.
+    all_documents : Toàn bộ document trong index, cần để mở rộng cửa sổ.
+    top_k         : Số cửa sổ trả về.
+    window_size   : Số câu lấy thêm ở mỗi bên câu khớp.
     """
 
     def __init__(
@@ -46,7 +40,7 @@ class SentenceWindowRetriever(BaseRetriever):
     ):
         super().__init__(vector_store, top_k)
         self.window_size = window_size
-        # Build lookup: (source, chunk_index) -> Document
+        # Bảng tra: (source, chunk_index) -> Document
         self._doc_map: dict[tuple[str, int], Document] = {
             (d.metadata.get("source", ""), d.metadata.get("chunk_index", -1)): d
             for d in all_documents

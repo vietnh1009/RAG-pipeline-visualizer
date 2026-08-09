@@ -1,26 +1,20 @@
 """
 post_retrieval/metadata_filter.py
 ===================================
-Hard Metadata Filter — keep only documents matching explicit conditions.
+Lọc cứng theo metadata — chỉ giữ document khớp mọi điều kiện.
 
-Unlike vector DB metadata filtering (which runs before/during ANN search),
-this runs AFTER retrieval as a safety net for:
-  - Conditions not supported by the vector DB's filter API.
-  - Dynamic conditions only known at post-retrieval time.
-  - Debugging / validating retrieval quality.
+Khác với filter của vector DB (chạy trước/trong lúc tìm ANN), lớp này chạy SAU
+truy hồi, làm lưới an toàn cho: điều kiện vector DB không hỗ trợ, điều kiện chỉ
+biết được ở thời điểm sau truy hồi, và việc debug chất lượng truy hồi.
 
-Supported operators
--------------------
-  eq       : exact equality       field_value == value
-  ne       : not equal            field_value != value
-  in       : membership           field_value in [value, ...]
-  gt       : greater than         field_value > value
-  lt       : less than            field_value < value
-  gte      : greater or equal     field_value >= value
-  lte      : less or equal        field_value <= value
-  contains : substring match      value in str(field_value)
+Toán tử hỗ trợ
+--------------
+  eq / ne            bằng / khác
+  in                 thuộc danh sách
+  gt / lt / gte / lte  lớn hơn / nhỏ hơn / lớn-bằng / nhỏ-bằng
+  contains           chứa chuỗi con
 
-All conditions are combined with AND logic.
+Mọi điều kiện được nối bằng AND.
 """
 
 from __future__ import annotations
@@ -32,17 +26,16 @@ from post_retrieval.base import BasePostProcessor
 
 class MetadataFilter(BasePostProcessor):
     """
-    Keep only documents that match all specified metadata conditions.
+    Chỉ giữ document khớp toàn bộ điều kiện metadata.
 
-    Parameters
-    ----------
-    conditions : List of condition dicts, each with keys:
-                   field    : metadata key to filter on
-                   operator : eq | ne | in | gt | lt | gte | lte | contains
-                   value    : comparison value
-
-    Example
+    Tham số
     -------
+    conditions : List dict, mỗi dict gồm ``field`` (key metadata),
+                 ``operator`` (eq | ne | in | gt | lt | gte | lte | contains)
+                 và ``value`` (giá trị so sánh).
+
+    Ví dụ
+    -----
     >>> f = MetadataFilter(conditions=[
     ...     {"field": "language", "operator": "eq",       "value": "vi"},
     ...     {"field": "year",     "operator": "gte",      "value": 2022},

@@ -1,16 +1,13 @@
 """
 retrieval/multi_query.py
 =========================
-Multi-Query retrieval — run N queries, merge results via RRF.
+Truy hồi nhiều query — chạy N query rồi gộp bằng RRF.
 
-Designed to work with MultiQueryTransformer or QueryDecompositionTransformer
-in the pre-retrieval stage, which produce multiple queries in
+Thiết kế để đi cùng MultiQueryTransformer hoặc QueryDecompositionTransformer ở
+bước pre-retrieval, những transformer sinh nhiều query trong
 ``TransformResult.queries``.
 
-If only one query is present, this behaves identically to DenseRetriever.
-
-Use when: pre-retrieval generates multiple query variants (multi_query,
-          step_back, decompose, expand strategies).
+Chỉ có một query thì hành vi giống hệt DenseRetriever.
 """
 
 from __future__ import annotations
@@ -25,15 +22,15 @@ from utils.documents import deduplicate
 
 class MultiQueryRetriever(BaseRetriever):
     """
-    Retrieve for each query in TransformResult.queries, fuse via RRF.
+    Truy hồi cho từng query trong TransformResult.queries rồi gộp bằng RRF.
 
-    Parameters
-    ----------
-    vector_store : Populated LangChain VectorStore.
-    top_k        : Final results after fusion.
-    candidate_k  : Results per query before fusion.
-    rrf_k        : RRF constant (default 60).
-    search_type  : Search type for each individual search.
+    Tham số
+    -------
+    vector_store : VectorStore của LangChain đã nạp dữ liệu.
+    top_k        : Số kết quả cuối sau khi gộp.
+    candidate_k  : Số kết quả mỗi query trước khi gộp.
+    rrf_k        : Hằng số RRF, mặc định 60.
+    search_type  : Kiểu tìm áp dụng cho từng lần tìm.
     """
 
     def __init__(

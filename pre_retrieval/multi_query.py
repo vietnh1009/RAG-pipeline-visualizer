@@ -1,25 +1,18 @@
 """
 pre_retrieval/multi_query.py
 =============================
-Multi-Query — decompose one query into N different retrieval perspectives.
+Multi-Query — tách một query thành N góc nhìn truy hồi khác nhau.
 
-Why it helps
-------------
-A single query vector may not capture all relevant aspects of a complex
-question. Different phrasings retrieve different — and complementary —
-chunks. By running N queries and merging results via RRF, recall improves
-significantly at the cost of N extra vector searches (cheap) and one
-LLM call (moderate).
+Một vector query khó bao hết mọi khía cạnh của câu hỏi phức tạp. Chạy N query
+rồi gộp bằng RRF giúp recall tăng rõ rệt, đổi lại N lần tìm vector (rẻ) và một
+lần gọi LLM.
 
-Example (n=3)
--------------
-Query: "Compare lifestyle vs medication for type 2 diabetes treatment"
-Sub-queries:
-  1. "lifestyle intervention for type 2 diabetes treatment"
-  2. "medication options for managing type 2 diabetes"
-  3. "diet exercise versus drug therapy diabetes comparison"
+Ví dụ (n=3) với "So sánh lối sống và thuốc trong điều trị tiểu đường type 2":
+  1. "can thiệp lối sống điều trị tiểu đường type 2"
+  2. "các lựa chọn thuốc kiểm soát tiểu đường type 2"
+  3. "so sánh ăn uống vận động với dùng thuốc"
 
-Use when: complex, multi-faceted queries; want higher recall at low cost.
+Dùng khi: câu hỏi phức tạp, nhiều mặt; cần recall cao với chi phí thấp.
 """
 
 from __future__ import annotations
@@ -30,12 +23,12 @@ from utils.llm import call_llm, parse_json_list
 
 class MultiQueryTransformer(BaseTransformer):
     """
-    Decompose the query into N sub-queries covering different angles.
+    Tách query thành N truy vấn con theo các góc tiếp cận khác nhau.
 
-    Parameters
-    ----------
-    n_queries        : Number of sub-queries to generate.
-    include_original : Also include the original query in the retrieval set.
+    Tham số
+    -------
+    n_queries        : Số truy vấn con cần sinh.
+    include_original : Giữ luôn query gốc trong tập truy hồi.
     language         : "vi" | "en" | "both"
     """
 

@@ -1,27 +1,23 @@
 """
 pre_retrieval/query_decomposition.py
 =====================================
-Query Decomposition — break a complex question into simpler sub-questions.
+Query Decomposition — chẻ câu hỏi phức thành các câu hỏi con đơn giản hơn.
 
-Unlike MultiQueryTransformer (which generates N paraphrases of the same
-question), QueryDecomposition identifies logically distinct sub-questions
-that must each be answered to resolve the original compound question.
+Khác MultiQueryTransformer (sinh N cách diễn đạt của *cùng* một câu hỏi), lớp
+này tách ra những câu hỏi con khác nhau về mặt logic, phải trả lời hết mới
+giải quyết được câu hỏi gốc.
 
-Types
------
-sequential : Sub-questions depend on each other (answer Q1 before Q2).
-             E.g. "Who founded the company that acquired DeepMind?"
-             → Q1: "Which company acquired DeepMind?"
-             → Q2: "Who founded [answer to Q1]?"
+Hai chế độ
+----------
+sequential : Câu hỏi con phụ thuộc nhau — phải trả lời Q1 mới hỏi được Q2.
+             "Ai sáng lập công ty đã mua DeepMind?"
+             → Q1 "Công ty nào mua DeepMind?" → Q2 "Ai sáng lập [đáp án Q1]?"
 
-parallel   : Sub-questions are independent and can be retrieved simultaneously.
-             E.g. "Compare BM25 and dense retrieval on precision and recall."
-             → Q1: "What is the precision of BM25 retrieval?"
-             → Q2: "What is the recall of BM25 retrieval?"
-             → Q3: "What is the precision of dense retrieval?"
-             → Q4: "What is the recall of dense retrieval?"
+parallel   : Câu hỏi con độc lập, truy hồi song song được.
+             "So sánh BM25 và dense retrieval về precision và recall."
+             → 4 câu hỏi con cho từng cặp phương pháp × chỉ số.
 
-Use when: compound questions, multi-hop reasoning, comparison queries.
+Dùng khi: câu hỏi ghép, suy luận nhiều bước, câu hỏi so sánh.
 """
 
 from __future__ import annotations
@@ -32,13 +28,13 @@ from utils.llm import call_llm, parse_json_list
 
 class QueryDecompositionTransformer(BaseTransformer):
     """
-    Decompose a complex question into simpler, targeted sub-questions.
+    Chẻ câu hỏi phức thành các câu hỏi con đơn giản, cụ thể hơn.
 
-    Parameters
-    ----------
+    Tham số
+    -------
     mode             : "parallel" | "sequential"
-    max_sub_questions: Maximum number of sub-questions to generate.
-    include_original : Also include the original query in the retrieval set.
+    max_sub_questions: Số câu hỏi con tối đa.
+    include_original : Giữ luôn query gốc trong tập truy hồi.
     language         : "vi" | "en" | "both"
     """
 

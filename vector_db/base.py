@@ -58,12 +58,12 @@ class _EmbedderAdapter(Embeddings):
 
 class BaseVectorStore(ABC):
     """
-    Abstract wrapper around a LangChain VectorStore.
+    Lớp bọc trừu tượng quanh VectorStore của LangChain.
 
-    Parameters
-    ----------
-    collection_name : Name of the collection / index / table.
-    force_reindex   : Wipe existing data and rebuild from scratch.
+    Tham số
+    -------
+    collection_name : Tên collection / index / bảng.
+    force_reindex   : Xoá dữ liệu cũ và dựng lại từ đầu.
     """
 
     def __init__(self, collection_name: str = "rag", force_reindex: bool = False):
@@ -77,15 +77,15 @@ class BaseVectorStore(ABC):
         embedder,                   # EmbeddingPipeline
     ) -> VectorStore:
         """
-        Return a populated VectorStore, creating or loading as needed.
+        Trả về VectorStore đã có dữ liệu — tạo mới hoặc nạp lại tuỳ tình huống.
 
-        Parameters
-        ----------
-        chunks   : Chunk Documents from the chunking stage.
-        embedder : ``EmbeddingPipeline`` from the embedding stage.
+        Tham số
+        -------
+        chunks   : Document chunk từ bước chunking.
+        embedder : ``EmbeddingPipeline`` từ bước embedding.
         """
 
-    # ── Shared utilities ──────────────────────────────────────────────────────
+    # ── Tiện ích dùng chung ───────────────────────────────────────────────────
 
     def _langchain_embedder(self, embedder):
         """
@@ -107,15 +107,15 @@ class BaseVectorStore(ABC):
     @staticmethod
     def sanitize_metadata(docs: list[Document]) -> list[Document]:
         """
-        Normalize Document metadata so every value is str | int | float | bool.
+        Chuẩn hoá metadata sao cho mọi giá trị là str | int | float | bool.
 
-        Most vector DBs (Chroma, pgvector, Qdrant, Pinecone…) reject metadata
-        that contains list/dict/None values.  This method converts them:
-          - None        → key dropped entirely
-          - list / dict → JSON string via json.dumps()
-          - anything else (e.g. Path, datetime) → str()
+        Phần lớn vector DB (Chroma, pgvector, Qdrant, Pinecone…) từ chối
+        metadata chứa list/dict/None. Quy tắc chuyển:
+          - None        → bỏ hẳn key
+          - list / dict → chuỗi JSON qua json.dumps()
+          - còn lại (Path, datetime, …) → str()
 
-        Returns a new list of Documents; originals are not mutated.
+        Trả về list Document mới, không sửa bản gốc.
         """
         _SCALAR = (str, int, float, bool)
         result: list[Document] = []

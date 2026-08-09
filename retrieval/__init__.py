@@ -1,26 +1,26 @@
 """
 retrieval/
 ==========
-Document retrieval package — Stage 6 of the full RAG pipeline.
+Truy hồi tài liệu — Stage 6 của pipeline RAG.
 
-Public API
-----------
+API công khai
+-------------
     from retrieval import get_retriever, build_retriever_from_config
 
     retriever = get_retriever("hybrid", vector_store=store,
                               documents=chunks, top_k=10)
     docs = retriever.retrieve(transform_result)
 
-Available strategies
---------------------
-  dense           Standard ANN vector similarity search
-  sparse          BM25 keyword search
-  hybrid          Dense + BM25 fused via RRF / weighted / DBSF  ← recommended
-  multi_query     Run N queries, merge results via RRF
-  parent_document Search child chunks, return parent context
-  sentence_window Search sentences, expand to ±window neighbours
-  multi_hop       Iterative retrieve-then-reason for complex questions
-  contextual      Dense + score threshold + MMR diversity
+Các chiến lược
+--------------
+  dense           Tìm ANN theo độ tương đồng vector
+  sparse          Tìm từ khoá bằng BM25
+  hybrid          Dense + BM25, gộp bằng RRF / weighted / DBSF ← khuyến nghị
+  multi_query     Chạy N query rồi gộp bằng RRF
+  parent_document Tìm chunk con, trả về chunk cha làm ngữ cảnh
+  sentence_window Tìm theo câu, mở rộng ±window câu lân cận
+  multi_hop       Lặp truy hồi rồi suy luận, cho câu hỏi nhiều bước
+  contextual      Dense + ngưỡng điểm + đa dạng hoá MMR
 """
 
 from retrieval.factory import get_retriever, build_retriever_from_config

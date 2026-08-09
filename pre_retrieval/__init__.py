@@ -1,34 +1,33 @@
 """
 pre_retrieval/
 ==============
-Query transformation package — Stage 5 of the full RAG pipeline.
+Biến đổi query — Stage 5 của pipeline RAG.
 
-Public API
-----------
+API công khai
+-------------
     from pre_retrieval import build_pipeline, build_pipeline_from_config
-    from pre_retrieval import PreRetrievalPipeline, TransformResult
 
     pipeline = build_pipeline(
         transformations=["rewrite", "multi_query"],
         llm_model="claude-haiku-4-5-20251001",
         multi_query_count=3,
     )
-    result = pipeline.transform("how does rag work?")
-    print(result.queries)          # list of query strings for retrieval
-    print(result.metadata_filter)  # populated by self_query if used
-    print(result.retrieval_path)   # populated by route if used
+    result = pipeline.transform("rag hoạt động thế nào?")
+    result.queries          # danh sách query để đưa sang retrieval
+    result.metadata_filter  # self_query điền
+    result.retrieval_path   # route điền
 
-Available transformations
--------------------------
-  none       Passthrough — no transformation
-  rewrite    Fix grammar/spelling, resolve pronouns, normalise
-  expand     Add synonyms / related terms (LLM or WordNet)
-  hyde       Generate hypothetical answer document to embed
-  step_back  Abstract to a broader background question
-  multi_query  Decompose into N retrieval perspectives
-  decompose  Break compound question into logical sub-questions
-  self_query Extract metadata filters from natural language
-  route      Direct query to the most appropriate retrieval path
+Các phép biến đổi
+-----------------
+  none         Không biến đổi
+  rewrite      Sửa chính tả/ngữ pháp, khử đại từ, chuẩn hoá
+  expand       Thêm từ đồng nghĩa / từ liên quan
+  hyde         Sinh tài liệu giả định rồi embed tài liệu đó
+  step_back    Lùi về câu hỏi nền tảng rộng hơn
+  multi_query  Tách thành N góc nhìn truy hồi
+  decompose    Chẻ câu hỏi ghép thành các câu hỏi con
+  self_query   Trích metadata filter từ ngôn ngữ tự nhiên
+  route        Định tuyến query tới nhánh retrieval phù hợp
 """
 
 from pre_retrieval.factory  import build_pipeline, build_pipeline_from_config

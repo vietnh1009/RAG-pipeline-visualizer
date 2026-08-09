@@ -1,21 +1,12 @@
 """
 pre_retrieval/base.py
 =====================
-Shared data container and abstract base class for all query transformers.
+Dataclass dùng chung và lớp ABC cho mọi query transformer.
 
-Every transformer follows the same contract:
-    transformer = SomeTransformer(**options)
-    result      = transformer.transform(query: str) -> TransformResult
+Hợp đồng chung:
+    result = SomeTransformer(**options).transform(query) -> TransformResult
 
-TransformResult
----------------
-The single data object that flows from pre-retrieval into retrieval.
-It carries every piece of information the retrieval stage may need:
-  - queries         : one or more query strings to retrieve for
-  - metadata_filter : structured filter for the vector DB
-  - intent          : classified query intent label
-  - retrieval_path  : routing target (collection name or strategy name)
-  - extra           : any additional transformer-specific metadata
+``TransformResult`` là vật thể duy nhất đi từ pre-retrieval sang retrieval.
 """
 
 from __future__ import annotations
@@ -27,18 +18,16 @@ from dataclasses import dataclass, field
 @dataclass
 class TransformResult:
     """
-    Output of any pre-retrieval transformer.
+    Kết quả của một pre-retrieval transformer.
 
-    Attributes
-    ----------
-    original_query  : The raw user query, unchanged.
-    queries         : One or more transformed / generated queries.
-                      The retrieval stage runs all of them and merges results.
-    metadata_filter : Optional structured filter dict for the vector DB.
-                      E.g. {"source": "policy_2024.pdf", "language": "vi"}
-    intent          : Classified query intent label (set by IntentClassifier).
-    retrieval_path  : Routing target set by QueryRouter.
-    extra           : Additional transformer-specific metadata.
+    Tham số
+    -------
+    original_query  : Query gốc của người dùng, giữ nguyên.
+    queries         : Các query đã biến đổi; retrieval chạy hết rồi gộp kết quả.
+    metadata_filter : Filter cho vector DB, vd {"source": "policy_2024.pdf"}.
+    intent          : Nhãn ý định, do IntentClassifier gán.
+    retrieval_path  : Đích định tuyến, do QueryRouter gán.
+    extra           : Metadata riêng của từng transformer.
     """
     original_query:  str
     queries:         list[str]      = field(default_factory=list)
@@ -48,7 +37,7 @@ class TransformResult:
     extra:           dict           = field(default_factory=dict)
 
     def all_queries(self) -> list[str]:
-        """Return original + transformed queries, deduplicated, order preserved."""
+        """Trả về query gốc + query đã biến đổi, bỏ trùng, giữ nguyên thứ tự."""
         seen:   set[str]  = set()
         result: list[str] = []
         for q in [self.original_query] + self.queries:
@@ -61,13 +50,13 @@ class TransformResult:
 
 class BaseTransformer(ABC):
     """
-    Abstract base for all pre-retrieval transformers.
+    Lớp cơ sở cho mọi pre-retrieval transformer.
 
-    Parameters
-    ----------
-    llm_model    : LLM model name used by LLM-based transformers.
+    Tham số
+    -------
+    llm_model    : Tên model cho các transformer dùng LLM.
     llm_provider : "openai" | "anthropic" | "google"
-    language     : "vi" | "en" | "both" — controls prompt language.
+    language     : "vi" | "en" | "both" — ngôn ngữ prompt.
     """
 
     def __init__(
@@ -82,4 +71,4 @@ class BaseTransformer(ABC):
 
     @abstractmethod
     def transform(self, query: str) -> TransformResult:
-        """Transform a raw query. Must be implemented by subclasses."""
+        """Biến đổi query thô. Lớp con bắt buộc cài đặt."""

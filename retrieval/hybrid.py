@@ -1,21 +1,18 @@
 """
 retrieval/hybrid.py
 ===================
-Hybrid retrieval — dense ANN + sparse BM25 fused into one ranking.
+Truy hồi lai — gộp dense ANN và sparse BM25 thành một bảng xếp hạng.
 
-Hybrid consistently outperforms either approach alone because dense
-vectors capture semantic meaning while sparse handles exact keywords.
-This is the recommended default for production RAG systems.
+Hybrid gần như luôn tốt hơn từng cách riêng lẻ: vector dense nắm ngữ nghĩa,
+sparse lo phần khớp từ khoá chính xác. Đây là lựa chọn mặc định khuyến nghị.
 
-Fusion methods
---------------
-rrf      : Reciprocal Rank Fusion (default). Position-based; robust to
-           score scale differences between dense and sparse.
-weighted : Linear combination of normalised scores. Control via ``alpha``.
-dbsf     : Distribution-Based Score Fusion. Z-score normalised; robust
-           to outlier scores in either list.
-
-Use when: production systems where recall and precision both matter.
+Cách gộp
+--------
+rrf      : Reciprocal Rank Fusion (mặc định). Dựa trên thứ hạng nên không bị
+           ảnh hưởng bởi thang điểm khác nhau giữa dense và sparse.
+weighted : Cộng tuyến tính điểm đã chuẩn hoá, điều chỉnh bằng ``alpha``.
+dbsf     : Distribution-Based Score Fusion, chuẩn hoá z-score, ít nhạy với
+           điểm ngoại lai.
 """
 
 from __future__ import annotations
@@ -32,19 +29,19 @@ from utils.documents import deduplicate
 
 class HybridRetriever(BaseRetriever):
     """
-    Fuse dense and BM25 sparse results into a single ranked list.
+    Gộp kết quả dense và BM25 thành một danh sách xếp hạng duy nhất.
 
-    Parameters
-    ----------
-    vector_store   : Populated LangChain VectorStore.
-    documents      : Full corpus for the BM25 index.
-    top_k          : Final number of results after fusion.
+    Tham số
+    -------
+    vector_store   : VectorStore của LangChain đã nạp dữ liệu.
+    documents      : Toàn bộ corpus để dựng index BM25.
+    top_k          : Số kết quả cuối sau khi gộp.
     fusion_method  : "rrf" | "weighted" | "dbsf"
-    alpha          : Dense weight in weighted fusion (0–1). 0.5 = equal.
-    rrf_k          : RRF constant k (default 60 from the original paper).
-    candidate_k    : Candidates fetched from each sub-retriever before fusion.
-                     Typically 3–4× top_k.
-    score_threshold: Min score filter applied to dense results.
+    alpha          : Trọng số dense trong weighted (0–1); 0.5 là ngang nhau.
+    rrf_k          : Hằng số k của RRF, mặc định 60 theo bài báo gốc.
+    candidate_k    : Số ứng viên lấy từ mỗi retriever con trước khi gộp,
+                     thường 3–4× top_k.
+    score_threshold: Ngưỡng điểm áp cho nhánh dense.
     """
 
     def __init__(
@@ -74,7 +71,7 @@ class HybridRetriever(BaseRetriever):
             fused = weighted_fusion(dense_docs, sparse_docs, alpha=self.alpha)
         elif self.fusion_method == "dbsf":
             fused = distribution_based_fusion([dense_docs, sparse_docs])
-        else:  # rrf (default)
+        else:  # rrf — mặc định
             fused = reciprocal_rank_fusion([dense_docs, sparse_docs], k=self.rrf_k)
 
         return deduplicate(fused)[:self.top_k]

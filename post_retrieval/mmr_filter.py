@@ -1,25 +1,17 @@
 """
 post_retrieval/mmr_filter.py
 =============================
-Maximal Marginal Relevance (MMR) diversity filter.
+Bộ lọc đa dạng MMR (Maximal Marginal Relevance).
 
-MMR selects documents that are simultaneously:
-  - Relevant to the query.
-  - Diverse from already-selected documents.
+MMR chọn document vừa liên quan tới query, vừa khác biệt với những document đã
+chọn — tránh việc LLM nhận năm chunk gần như giống hệt nhau, vừa phí context
+vừa làm câu trả lời thiên về nội dung lặp.
 
-This prevents the LLM from receiving five nearly-identical chunks that
-waste context window space and bias the answer toward repeated content.
-
-Algorithm (Carbonell & Goldstein, 1998):
+Công thức (Carbonell & Goldstein, 1998):
     MMR = argmax [ λ · Sim(q, d) − (1−λ) · max_{s∈S} Sim(d, s) ]
 
-Similarity backend
-------------------
-Uses sentence-transformers embeddings when available; falls back to
-token-level Jaccard similarity (no extra dependencies).
-
-Use when: multiple retrieval queries (multi_query, hybrid) produce many
-          near-duplicate passages about the same fact.
+Đo tương đồng bằng embedding sentence-transformers nếu có; không có thì lùi về
+Jaccard trên token (không cần thư viện thêm).
 """
 
 from __future__ import annotations
@@ -31,15 +23,15 @@ from post_retrieval.base import BasePostProcessor
 
 class MMRFilter(BasePostProcessor):
     """
-    Select a diverse subset via Maximal Marginal Relevance.
+    Chọn tập con đa dạng bằng Maximal Marginal Relevance.
 
-    Parameters
-    ----------
-    top_n           : Number of documents to select.
-    mmr_lambda      : Relevance vs diversity trade-off.
-                      1.0 = pure relevance; 0.0 = pure diversity.
-    embedding_model : sentence-transformers model for cosine similarity.
-                      Pass None to use Jaccard fallback.
+    Tham số
+    -------
+    top_n           : Số document cần chọn.
+    mmr_lambda      : Cân bằng liên quan / đa dạng.
+                      1.0 = thuần liên quan; 0.0 = thuần đa dạng.
+    embedding_model : Model sentence-transformers để tính cosine.
+                      Truyền None để dùng Jaccard.
     """
 
     def __init__(

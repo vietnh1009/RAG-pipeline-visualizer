@@ -1,25 +1,23 @@
 """
 post_retrieval/pipeline.py
 ===========================
-PostRetrievalPipeline — orchestrate multiple processors in a fixed sequence.
+PostRetrievalPipeline — chạy các bộ xử lý theo một thứ tự cố định.
 
-Standard processing order (each step is optional, enabled via constructor):
-  1. MetadataFilter    — hard filter (if conditions provided)
-  2. RedundancyFilter  — semantic near-duplicate removal
-  3. Reranker          — relevance scoring (cross_encoder / API / LLM)
-  4. LLMFilter         — binary relevance filter (optional)
-  5. MMRFilter         — diversity selection (optional)
-  6. ContextCompressor — content trimming (optional)
-  7. ContextOrderer    — lost-in-the-middle mitigation (always last)
+  1. MetadataFilter    — lọc cứng theo metadata (nếu có điều kiện)
+  2. RedundancyFilter  — bỏ đoạn gần trùng ngữ nghĩa
+  3. Reranker          — chấm lại độ liên quan (cross_encoder / API / LLM)
+  4. LLMFilter         — lọc nhị phân bằng LLM (tuỳ chọn)
+  5. MMRFilter         — chọn theo độ đa dạng (tuỳ chọn)
+  6. ContextCompressor — cắt gọn nội dung (tuỳ chọn)
+  7. ContextOrderer    — chống "lost in the middle" (luôn chạy cuối)
 
-Each step is only executed if enabled.  The order is fixed and
-intentional: dedup before rerank (saves rerank API calls), rerank
-before MMR (MMR needs scores), ordering always last.
+Bước nào không bật thì bỏ qua. Thứ tự là cố ý: khử trùng trước rerank để tiết
+kiệm lời gọi API, rerank trước MMR vì MMR cần điểm, sắp thứ tự luôn cuối cùng.
 
-Usage
+Ví dụ
 -----
     pipeline = PostRetrievalPipeline(reranker="cross_encoder", top_n=5)
-    docs = pipeline.process(query="What is RAG?", docs=retrieved_docs)
+    docs = pipeline.process(query="RAG là gì?", docs=retrieved_docs)
 """
 
 from __future__ import annotations
@@ -36,25 +34,25 @@ logger = logging.getLogger(__name__)
 
 class PostRetrievalPipeline:
     """
-    Chain multiple post-retrieval processors.
+    Nối nhiều bộ xử lý sau truy hồi.
 
-    Parameters
-    ----------
+    Tham số
+    -------
     reranker             : "none" | "cross_encoder" | "cohere" | "llm"
-    top_n                : Documents kept after reranking.
-    apply_mmr            : Enable MMR diversity filter.
-    mmr_lambda           : MMR relevance vs diversity trade-off (0–1).
-    apply_compression    : Enable LLM contextual compression.
+    top_n                : Số document giữ lại sau rerank.
+    apply_mmr            : Bật bộ lọc đa dạng MMR.
+    mmr_lambda           : Cân bằng liên quan / đa dạng của MMR (0–1).
+    apply_compression    : Bật nén ngữ cảnh bằng LLM.
     compression_mode     : "extract" | "summarise"
-    apply_llm_filter     : Enable LLM binary relevance filter.
-    apply_redundancy     : Enable semantic near-duplicate filter.
-    redundancy_threshold : Cosine similarity threshold for near-dup.
+    apply_llm_filter     : Bật lọc nhị phân bằng LLM.
+    apply_redundancy     : Bật lọc đoạn gần trùng.
+    redundancy_threshold : Ngưỡng cosine coi là gần trùng.
     context_ordering     : "relevance" | "reverse" | "sandwich" | "original"
-    metadata_conditions  : Hard filter conditions (list of dicts).
-    llm_model            : LLM for reranker / compressor / filter.
+    metadata_conditions  : Điều kiện lọc cứng, list các dict.
+    llm_model            : LLM cho reranker / compressor / filter.
     llm_provider         : "openai" | "anthropic" | "google"
-    cross_encoder_model  : Model for CrossEncoderReranker.
-    cohere_rerank_model  : Model for CohereReranker.
+    cross_encoder_model  : Model cho CrossEncoderReranker.
+    cohere_rerank_model  : Model cho CohereReranker.
     language             : "vi" | "en" | "both"
     """
 
@@ -80,12 +78,12 @@ class PostRetrievalPipeline:
         self.top_n = top_n
         self._steps: list[BasePostProcessor] = []
 
-        # 1. Hard metadata filter
+        # 1. Lọc cứng theo metadata
         if metadata_conditions:
             from post_retrieval.metadata_filter import MetadataFilter
             self._steps.append(MetadataFilter(conditions=metadata_conditions))
 
-        # 2. Near-duplicate removal (run before reranking to save API calls)
+        # 2. Bỏ đoạn gần trùng — chạy trước rerank để tiết kiệm lời gọi API
         if apply_redundancy:
             from post_retrieval.redundancy_filter import RedundancyFilter
             self._steps.append(RedundancyFilter(
@@ -99,17 +97,17 @@ class PostRetrievalPipeline:
                 cross_encoder_model, cohere_rerank_model, language,
             ))
 
-        # 4. LLM binary filter
+        # 4. Lọc nhị phân bằng LLM
         if apply_llm_filter:
             from post_retrieval.llm_filter import LLMFilter
             self._steps.append(LLMFilter(llm_model=llm_model, llm_provider=llm_provider, language=language))
 
-        # 5. MMR diversity
+        # 5. Đa dạng hoá bằng MMR
         if apply_mmr:
             from post_retrieval.mmr_filter import MMRFilter
             self._steps.append(MMRFilter(top_n=top_n, mmr_lambda=mmr_lambda))
 
-        # 6. Contextual compression
+        # 6. Nén ngữ cảnh
         if apply_compression:
             from post_retrieval.context_compressor import ContextCompressor
             self._steps.append(ContextCompressor(
@@ -117,22 +115,22 @@ class PostRetrievalPipeline:
                 mode=compression_mode, language=language,
             ))
 
-        # 7. Context ordering — always applied last
+        # 7. Sắp thứ tự ngữ cảnh — luôn chạy cuối cùng
         from post_retrieval.context_orderer import ContextOrderer
         self._steps.append(ContextOrderer(ordering=context_ordering))
 
     def process(self, query: str, docs: list[Document]) -> list[Document]:
         """
-        Run all configured processors in sequence.
+        Chạy lần lượt toàn bộ bộ xử lý đã bật.
 
-        Parameters
-        ----------
-        query : Primary user query.
-        docs  : Raw retrieved documents from the retrieval stage.
-
-        Returns
+        Tham số
         -------
-        Refined list of documents ready for prompt construction.
+        query : Query chính của người dùng.
+        docs  : Document thô từ bước retrieval.
+
+        Trả về
+        ------
+        Danh sách document đã tinh lọc, sẵn sàng dựng prompt.
         """
         current = deduplicate(docs)
 

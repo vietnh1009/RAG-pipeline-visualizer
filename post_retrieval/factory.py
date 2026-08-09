@@ -1,10 +1,10 @@
 """
 post_retrieval/factory.py
 ==========================
-Factory function and config-driven builder — single entry points.
+Hai điểm vào duy nhất để dựng pipeline xử lý sau truy hồi.
 
-    build_pipeline(**kwargs)               -> PostRetrievalPipeline
-    build_pipeline_from_config(cfg)        -> PostRetrievalPipeline
+    build_pipeline(**kwargs)        -> PostRetrievalPipeline
+    build_pipeline_from_config(cfg) -> PostRetrievalPipeline
 """
 
 from __future__ import annotations
@@ -14,45 +14,30 @@ from post_retrieval.pipeline import PostRetrievalPipeline
 
 def build_pipeline(**kwargs) -> PostRetrievalPipeline:
     """
-    Build a PostRetrievalPipeline with explicit parameters.
+    Dựng PostRetrievalPipeline từ tham số truyền thẳng.
 
-    All keyword arguments are forwarded directly to PostRetrievalPipeline.
+    Mọi keyword argument được chuyển nguyên vẹn xuống PostRetrievalPipeline.
 
-    Examples
-    --------
+    Ví dụ
+    -----
     >>> build_pipeline(reranker="cross_encoder", top_n=5)
     >>> build_pipeline(reranker="cohere", apply_mmr=True, context_ordering="sandwich")
-    >>> build_pipeline(reranker="none", apply_compression=True, compression_mode="extract")
+    >>> build_pipeline(reranker="none", apply_compression=True)
     """
     return PostRetrievalPipeline(**kwargs)
 
 
 def build_pipeline_from_config(cfg: dict) -> PostRetrievalPipeline:
     """
-    Build a PostRetrievalPipeline from the ``query_pipeline.post_retrieval``
-    section of config.yaml.
+    Dựng PostRetrievalPipeline từ mục ``query_pipeline.post_retrieval`` của config.yaml.
 
-    Parameters
-    ----------
-    cfg : Full config dict from ``utils.config.load_config()``.
+    Tham số
+    -------
+    cfg : Dict config đầy đủ từ ``utils.config.load_config()``.
 
-    Config keys used
-    ----------------
-    query_pipeline.post_retrieval.reranker
-    query_pipeline.post_retrieval.top_n
-    query_pipeline.post_retrieval.cross_encoder_model
-    query_pipeline.post_retrieval.apply_mmr
-    query_pipeline.post_retrieval.mmr_lambda
-    query_pipeline.post_retrieval.apply_compression
-    query_pipeline.post_retrieval.compression_mode
-    query_pipeline.post_retrieval.apply_llm_filter
-    query_pipeline.post_retrieval.apply_redundancy
-    query_pipeline.post_retrieval.redundancy_threshold
-    query_pipeline.post_retrieval.context_ordering
-    query_pipeline.post_retrieval.metadata_conditions
-    query_pipeline.generation.provider
-    query_pipeline.generation.model_name
-    data.language
+    Đọc thêm ``query_pipeline.generation`` (provider, model_name) và
+    ``data.language``, nên phải truyền config đầy đủ chứ không phải một mẩu —
+    truyền thiếu sẽ KeyError.
     """
     post_cfg = cfg["query_pipeline"]["post_retrieval"]
     gen_cfg  = cfg["query_pipeline"]["generation"]

@@ -1,13 +1,12 @@
 """
 vector_db/
 ==========
-Vector storage package for the RAG indexing pipeline.
+Lưu trữ vector cho pipeline indexing.
 
-Public API
-----------
+API công khai
+-------------
     from vector_db import get_vector_store, get_vector_store_from_config
 
-    # Direct usage
     store = get_vector_store(
         provider="chroma",
         chunks=chunks,
@@ -16,23 +15,21 @@ Public API
     )
     retriever = store.as_retriever(search_kwargs={"k": 10})
 
-    # Config-driven (used by main.py)
+    # hoặc lấy cấu hình từ config.yaml
     store = get_vector_store_from_config(chunks, pipeline, cfg)
 
-Individual store classes can also be imported directly:
-    from vector_db.qdrant_store  import QdrantVectorStore
-    from vector_db.chroma_store  import ChromaVectorStore
-    from vector_db.faiss_store   import FAISSVectorStore
+Cũng có thể import thẳng từng lớp store, ví dụ
+``from vector_db.faiss_store import FAISSVectorStore``.
 
-Providers
----------
-  faiss              Local file, no server, < 10 M vectors
-  chroma             Local persistent, dev-friendly, < 10 M vectors
-  pinecone           Managed cloud, auto-scale, ~ 1 B vectors
-  qdrant             Self/cloud, best filtering (ACORN), ~ 1 B+ vectors
-  weaviate           Self/cloud, native hybrid search, ~ 1 B vectors
-  pgvector           PostgreSQL extension, ACID, < 50 M vectors
-  lancedb            Serverless columnar, embedded mode, ~ 1 B vectors
+Provider
+--------
+  faiss     File cục bộ, không cần server, < 10 triệu vector
+  chroma    Lưu cục bộ, tiện khi phát triển, < 10 triệu vector
+  pinecone  Cloud có quản lý, tự co giãn, ~ 1 tỷ vector
+  qdrant    Tự dựng hoặc cloud, lọc tốt nhất (ACORN), ~ 1 tỷ+ vector
+  weaviate  Tự dựng hoặc cloud, hybrid search sẵn có, ~ 1 tỷ vector
+  pgvector  Extension của PostgreSQL, có ACID, < 50 triệu vector
+  lancedb   Cột hoá, chạy nhúng không cần server, ~ 1 tỷ vector
 """
 
 from vector_db.factory import get_vector_store, get_vector_store_from_config

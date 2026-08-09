@@ -1,7 +1,7 @@
 """
 retrieval/utils.py
 ==================
-Shared helper functions used across retrieval modules.
+Các hàm gộp kết quả xếp hạng dùng chung cho các module retrieval.
 """
 
 from __future__ import annotations
@@ -16,14 +16,14 @@ def reciprocal_rank_fusion(
     k: int = 60,
 ) -> list[Document]:
     """
-    Reciprocal Rank Fusion (RRF) — merge multiple ranked lists.
+    Reciprocal Rank Fusion (RRF) — gộp nhiều danh sách đã xếp hạng.
 
-    RRF score:  score(d) = Σ  1 / (k + rank_i(d))
+    Điểm RRF:  score(d) = Σ  1 / (k + rank_i(d))
 
-    k=60 is the standard constant from Cormack et al. (2009).
-    Higher k → smoother differences; lower k → stronger top-rank bias.
+    k=60 là hằng số chuẩn theo Cormack et al. (2009). k lớn làm chênh lệch mượt
+    hơn, k nhỏ thiên vị mạnh cho các hạng đầu.
 
-    Returns documents sorted by descending RRF score.
+    Trả về document sắp theo điểm RRF giảm dần.
     """
     scores:  dict[str, float]    = defaultdict(float)
     doc_map: dict[str, Document] = {}
@@ -46,17 +46,17 @@ def weighted_fusion(
     alpha: float = 0.5,
 ) -> list[Document]:
     """
-    Weighted linear combination of dense and sparse scores.
+    Kết hợp tuyến tính có trọng số giữa điểm dense và sparse.
 
-    Final score = alpha * dense_norm + (1 - alpha) * sparse_norm
-    Scores are min-max normalised within each list before combining.
+    Điểm cuối = alpha * dense_norm + (1 - alpha) * sparse_norm, mỗi danh sách
+    được chuẩn hoá min-max trước khi cộng.
 
-    alpha = 1.0 → pure dense; alpha = 0.0 → pure sparse.
+    alpha = 1.0 → thuần dense; alpha = 0.0 → thuần sparse.
     """
     def normalise(docs: list[Document], key: str) -> dict[str, float]:
         raw = [doc.metadata.get(key, 0.0) for doc in docs]
-        # Fall back to rank-based scoring when explicit scores are absent
-        # (most dense VectorStore backends don't set relevance_score by default)
+        # Không có điểm tường minh thì chấm theo thứ hạng
+        # (phần lớn VectorStore dense không tự đặt relevance_score)
         if not raw or all(s == 0.0 for s in raw):
             raw = [1.0 / (i + 1) for i in range(len(docs))]
         lo, hi = min(raw), max(raw)
@@ -84,8 +84,8 @@ def distribution_based_fusion(ranked_lists: list[list[Document]]) -> list[Docume
     """
     Distribution-Based Score Fusion (DBSF).
 
-    Z-score normalises each list's scores, then averages across lists.
-    More robust than min-max to score outliers.
+    Chuẩn hoá z-score điểm của từng danh sách rồi lấy trung bình. Ít nhạy với
+    điểm ngoại lai hơn min-max.
     """
     import math
 
@@ -96,7 +96,7 @@ def distribution_based_fusion(ranked_lists: list[list[Document]]) -> list[Docume
         raw = [doc.metadata.get("relevance_score", 0.0) for doc in ranked]
         if not raw:
             continue
-        # Fall back to rank-based when explicit scores are absent
+        # Không có điểm tường minh thì chấm theo thứ hạng
         if all(s == 0.0 for s in raw):
             raw = [1.0 / (i + 1) for i in range(len(ranked))]
         mean = sum(raw) / len(raw)

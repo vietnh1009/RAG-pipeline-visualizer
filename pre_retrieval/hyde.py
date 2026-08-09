@@ -3,27 +3,15 @@ pre_retrieval/hyde.py
 =====================
 HyDE — Hypothetical Document Embeddings (Gao et al., 2022).
 
-Instead of embedding the query directly, ask an LLM to write a short
-hypothetical document that *would* answer the query. Embed that
-hypothetical document instead of the original question.
+Thay vì embed thẳng câu hỏi, nhờ LLM viết một đoạn tài liệu giả định *sẽ* trả
+lời câu hỏi đó, rồi embed đoạn giả định này.
 
-Why it works
-------------
-Embedding models see queries and documents during training but often
-treat short questions and long answer passages as very different objects
-in the vector space. A hypothetical document uses the same vocabulary
-and style as a real document, so it lands much closer to actual answers.
+Vì sao hiệu quả: câu hỏi ngắn và đoạn văn trả lời nằm xa nhau trong không gian
+vector. Tài liệu giả định dùng đúng từ vựng và văn phong tài liệu thật nên rơi
+gần vùng chứa câu trả lời.
 
-Mechanism
----------
-Query: "What are the symptoms of metabolic syndrome?"
-           ↓  LLM generates
-Hypothetical doc: "Metabolic syndrome is characterised by central obesity,
-hyperglycaemia, elevated triglycerides, reduced HDL-C, and hypertension..."
-           ↓  embed hypothetical doc → retrieve with this vector
-
-Use when: queries are short or abstract; asymmetric embedding problem.
-Note    : adds one LLM call per query; use response caching to reduce cost.
+Dùng khi : query ngắn hoặc trừu tượng.
+Lưu ý    : tốn thêm một lần gọi LLM cho mỗi query.
 """
 
 from __future__ import annotations
@@ -34,12 +22,12 @@ from utils.llm import call_llm
 
 class HyDETransformer(BaseTransformer):
     """
-    Generate a hypothetical answer document and use it as the retrieval query.
+    Sinh tài liệu giả định và dùng nó làm query truy hồi.
 
-    Parameters
-    ----------
-    doc_length : Approximate word count of the generated document.
-    language   : "vi" | "en" | "both" — controls generation language.
+    Tham số
+    -------
+    doc_length : Số từ xấp xỉ của đoạn sinh ra.
+    language   : "vi" | "en" | "both" — ngôn ngữ sinh.
     """
 
     _PROMPT_EN = (

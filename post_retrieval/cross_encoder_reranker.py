@@ -1,23 +1,22 @@
 """
 post_retrieval/cross_encoder_reranker.py
 =========================================
-Cross-Encoder Reranker — local transformer-based relevance scoring.
+Cross-Encoder Reranker — chấm điểm liên quan bằng transformer chạy cục bộ.
 
-A cross-encoder scores each (query, document) pair jointly through a
-transformer — unlike bi-encoders that encode query and doc separately.
-This gives significantly higher relevance accuracy at the cost of O(N)
-inference (one forward pass per document).
+Cross-encoder đưa cả cặp (query, document) qua transformer cùng lúc, khác
+bi-encoder mã hoá riêng từng bên. Độ chính xác cao hơn hẳn, đổi lại chi phí
+O(N) — mỗi document một lượt forward.
 
-Recommended models for Vietnamese + English
---------------------------------------------
-  BAAI/bge-reranker-v2-m3          Multilingual, best for VI+EN  ★★★★★
-  BAAI/bge-reranker-large          Multilingual, higher quality  ★★★★
-  cross-encoder/ms-marco-MiniLM-L-6-v2  Fast, English only      ★★★★★
-  cross-encoder/ms-marco-MiniLM-L-12-v2 Better, English only    ★★★★
-  mixedbread-ai/mxbai-rerank-large-v1   English, strong         ★★★★
+Model khuyến nghị cho Việt + Anh
+--------------------------------
+  BAAI/bge-reranker-v2-m3               Đa ngôn ngữ, tốt nhất cho VI+EN ★★★★★
+  BAAI/bge-reranker-large               Đa ngôn ngữ, chất lượng cao     ★★★★
+  cross-encoder/ms-marco-MiniLM-L-6-v2  Nhanh, chỉ tiếng Anh            ★★★★★
+  cross-encoder/ms-marco-MiniLM-L-12-v2 Tốt hơn, chỉ tiếng Anh          ★★★★
+  mixedbread-ai/mxbai-rerank-large-v1   Tiếng Anh, mạnh                 ★★★★
 
-Use when: retrieval recalls good candidates but ranking needs improvement;
-          no GPU required for small batches (CPU is fine for top_n ≤ 20).
+Dùng khi: retrieval đã lấy đúng ứng viên nhưng thứ hạng chưa tốt. Không cần GPU
+nếu batch nhỏ — CPU đủ cho top_n ≤ 20.
 """
 
 from __future__ import annotations
@@ -29,15 +28,15 @@ from post_retrieval.base import BasePostProcessor
 
 class CrossEncoderReranker(BasePostProcessor):
     """
-    Rerank documents using a local cross-encoder model.
+    Rerank document bằng model cross-encoder chạy cục bộ.
 
-    Parameters
-    ----------
-    model_name  : HuggingFace cross-encoder model identifier.
-    top_n       : Documents to keep after reranking.
-    batch_size  : Pairs per inference batch.
+    Tham số
+    -------
+    model_name  : Tên model cross-encoder trên HuggingFace.
+    top_n       : Số document giữ lại sau rerank.
+    batch_size  : Số cặp mỗi batch suy luận.
     device      : "cpu" | "cuda" | "mps"
-    max_length  : Max token length per (query, doc) pair.
+    max_length  : Độ dài token tối đa cho mỗi cặp (query, doc).
     """
 
     def __init__(
@@ -53,7 +52,7 @@ class CrossEncoderReranker(BasePostProcessor):
         self.batch_size = batch_size
         self.device     = device
         self.max_length = max_length
-        self._model     = None   # lazy-loaded
+        self._model     = None   # nạp trễ, chỉ khi thật sự dùng
 
     def _load(self):
         if self._model is not None:

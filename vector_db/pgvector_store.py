@@ -1,24 +1,20 @@
 """
 vector_db/pgvector_store.py
 ============================
-pgvector PostgreSQL extension — ACID transactions, no new infrastructure.
+pgvector — extension của PostgreSQL, có transaction ACID, không cần dựng thêm
+hạ tầng mới.
 
-Best choice if your stack already includes PostgreSQL.
-Provides full SQL filtering, ACID guarantees, and JOINs with other tables.
+Lựa chọn tốt nhất nếu hệ thống đã dùng PostgreSQL: lọc bằng SQL đầy đủ, bảo đảm
+ACID, JOIN được với các bảng khác.
 
-Scaling options
----------------
-pgvector       : < 10 M vectors  (default, built-in HNSW index)
-pgvectorscale  : < 100 M+ vectors (DiskANN-based, Timescale extension)
+Mức mở rộng
+-----------
+pgvector      : < 10 triệu vector (mặc định, index HNSW sẵn có)
+pgvectorscale : 100 triệu+ vector (dựa trên DiskANN, extension của Timescale)
 
-Re-index prevention
--------------------
-Queries ``langchain_pg_embedding`` table row count for this collection.
+Tránh index lại: đếm số dòng của collection trong bảng ``langchain_pg_embedding``.
 
-Scale     : < 50 M vectors (pgvector) / 100 M+ (pgvectorscale)
-Use when  : already on PostgreSQL, need ACID, want SQL filtering.
-
-Env var: DATABASE_URL  (postgresql+psycopg://user:pass@host:5432/db)
+Biến môi trường: DATABASE_URL (postgresql+psycopg://user:pass@host:5432/db)
 """
 
 from __future__ import annotations
@@ -36,12 +32,14 @@ logger = logging.getLogger(__name__)
 
 class PGVectorStore(BaseVectorStore):
     """
-    Parameters
-    ----------
-    collection_name       : Table identifier inside PostgreSQL.
-    connection_string     : PostgreSQL DSN. Falls back to DATABASE_URL env var.
-    distance_strategy     : "cosine" | "euclidean" | "inner_product"
-    force_reindex         : Drop and recreate the collection table.
+    Vector store pgvector.
+
+    Tham số
+    -------
+    collection_name   : Định danh bảng trong PostgreSQL.
+    connection_string : DSN PostgreSQL; bỏ trống thì lấy từ DATABASE_URL.
+    distance_strategy : "cosine" | "euclidean" | "inner_product"
+    force_reindex     : Xoá bảng collection và tạo lại.
     """
 
     def __init__(
@@ -60,7 +58,7 @@ class PGVectorStore(BaseVectorStore):
 
         lc_embedder = self._langchain_embedder(embedder)
 
-        # Check existing row count
+        # Đếm số dòng sẵn có
         if not self.force_reindex:
             count = self._row_count()
             if count > 0:
@@ -81,9 +79,9 @@ class PGVectorStore(BaseVectorStore):
         )
 
     def _row_count(self) -> int:
-        """Return existing row count for this collection, or 0 on error."""
+        """Số dòng hiện có của collection; lỗi thì trả 0."""
         import psycopg
-        # Normalise URI scheme for psycopg
+        # Chuẩn hoá scheme URI cho psycopg
         conn_str = self.connection_string.replace("postgresql+psycopg://", "postgresql://")
         try:
             with psycopg.connect(conn_str) as db, db.cursor() as cur:

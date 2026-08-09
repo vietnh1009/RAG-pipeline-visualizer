@@ -1,14 +1,13 @@
 """
 retrieval/base.py
 =================
-Abstract base class and shared helpers for all retrieval strategies.
+Lớp ABC và helper dùng chung cho mọi chiến lược truy hồi.
 
-Every retriever follows the same contract:
-    retriever = SomeRetriever(vector_store, **options)
-    docs      = retriever.retrieve(transform_result) -> list[Document]
+Hợp đồng chung:
+    docs = SomeRetriever(vector_store, **options).retrieve(result) -> list[Document]
 
-The input is always a TransformResult from the pre-retrieval stage,
-which carries one or more query strings plus optional metadata filters.
+Đầu vào luôn là TransformResult từ bước pre-retrieval — mang một hoặc nhiều
+query kèm metadata filter tuỳ chọn.
 """
 
 from __future__ import annotations
@@ -23,12 +22,12 @@ from langchain_core.vectorstores import VectorStore
 
 class BaseRetriever(ABC):
     """
-    Abstract base for all retrieval strategies.
+    Lớp cơ sở cho mọi chiến lược truy hồi.
 
-    Parameters
-    ----------
-    vector_store : Populated LangChain VectorStore.
-    top_k        : Maximum number of documents to return.
+    Tham số
+    -------
+    vector_store : VectorStore của LangChain đã nạp dữ liệu.
+    top_k        : Số document tối đa trả về.
     """
 
     def __init__(self, vector_store: VectorStore, top_k: int = 5):
@@ -38,12 +37,12 @@ class BaseRetriever(ABC):
     @abstractmethod
     def retrieve(self, result) -> list[Document]:
         """
-        Retrieve documents for the given TransformResult.
+        Truy hồi document cho một TransformResult.
 
-        Parameters
-        ----------
-        result : TransformResult from pre_retrieval stage.
-                 Uses result.queries, result.metadata_filter, result.extra.
+        Tham số
+        -------
+        result : TransformResult từ bước pre_retrieval. Dùng ``queries``,
+                 ``metadata_filter`` và ``extra``.
         """
 
     def _search(
@@ -55,10 +54,10 @@ class BaseRetriever(ABC):
         score_threshold: float = 0.0,
     ) -> list[Document]:
         """
-        Execute a single vector search.
+        Chạy một lần tìm vector.
 
-        Wraps the LangChain VectorStore similarity search API uniformly
-        across all provider backends.
+        Bọc API similarity search của LangChain VectorStore để mọi provider
+        dùng chung một cách gọi.
         """
         search_kwargs: dict[str, Any] = {"k": k}
         if filter:

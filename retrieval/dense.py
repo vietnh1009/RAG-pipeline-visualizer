@@ -1,20 +1,19 @@
 """
 retrieval/dense.py
 ==================
-Dense retrieval — standard ANN vector similarity search.
+Dense retrieval — tìm ANN theo độ tương đồng vector.
 
-Embeds the query and searches the vector index for the top-k most
-similar document chunks. This is the foundation of all RAG systems.
+Embed query rồi tìm trong index k chunk gần nhất. Đây là nền của mọi hệ RAG.
 
-Search types
-------------
-similarity                : Cosine / dot-product. Returns top-k unconditionally.
-similarity_score_threshold: Returns only documents above a min score, up to k.
-                            Prevents returning irrelevant content on OOD queries.
-mmr                       : Maximal Marginal Relevance. Trades off relevance vs
-                            diversity to avoid redundant chunks in the context.
+Kiểu tìm
+--------
+similarity                 : Cosine / dot-product, luôn trả về đủ top-k.
+similarity_score_threshold : Chỉ trả document vượt ngưỡng điểm, tối đa k —
+                             tránh trả rác khi query lệch khỏi miền dữ liệu.
+mmr                        : Maximal Marginal Relevance, đánh đổi liên quan lấy
+                             đa dạng để context bớt trùng lặp.
 
-Use when: semantic queries where meaning matters more than exact keywords.
+Dùng khi: câu hỏi ngữ nghĩa, ý nghĩa quan trọng hơn khớp từ khoá.
 """
 
 from __future__ import annotations
@@ -27,14 +26,14 @@ from retrieval.base import BaseRetriever
 
 class DenseRetriever(BaseRetriever):
     """
-    Standard dense vector similarity retrieval.
+    Truy hồi dense theo độ tương đồng vector.
 
-    Parameters
-    ----------
-    vector_store     : Populated LangChain VectorStore.
-    top_k            : Number of chunks to return.
+    Tham số
+    -------
+    vector_store     : VectorStore của LangChain đã nạp dữ liệu.
+    top_k            : Số chunk trả về.
     search_type      : "similarity" | "similarity_score_threshold" | "mmr"
-    score_threshold  : Min similarity score (similarity_score_threshold mode).
+    score_threshold  : Ngưỡng điểm tối thiểu, chỉ dùng ở chế độ score_threshold.
     """
 
     def __init__(

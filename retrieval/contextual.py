@@ -1,16 +1,14 @@
 """
 retrieval/contextual.py
 ========================
-Contextual Retrieval — dense search with score threshold + MMR diversity.
+Contextual Retrieval — dense + ngưỡng điểm + đa dạng hoá MMR.
 
-A production-grade single retriever that applies multiple quality controls:
-  1. Dense similarity search with a score threshold (removes off-topic results).
-  2. MMR re-ranking for diversity (avoids redundant chunks in context window).
+Một retriever đơn nhưng gắn sẵn hai lớp kiểm soát chất lượng:
+  1. Tìm dense có ngưỡng điểm, loại bỏ kết quả lạc đề.
+  2. Xếp lại bằng MMR để context không chứa nhiều chunk trùng nội dung.
 
-This is a good default when you want a reliable, well-tuned single strategy
-without the complexity of a multi-strategy ensemble.
-
-Use when: you need one solid retriever with noise filtering and diversity.
+Dùng khi: muốn một chiến lược duy nhất, chắc chắn, không cần dựng tổ hợp nhiều
+retriever.
 """
 
 from __future__ import annotations
@@ -23,16 +21,16 @@ from retrieval.base import BaseRetriever
 
 class ContextualRetriever(BaseRetriever):
     """
-    Dense retrieval with score threshold and MMR diversity.
+    Truy hồi dense kèm ngưỡng điểm và đa dạng hoá MMR.
 
-    Parameters
-    ----------
-    vector_store     : Populated LangChain VectorStore.
-    top_k            : Final documents after MMR.
-    candidate_k      : Candidates fetched before filtering (2–5× top_k).
-    score_threshold  : Minimum similarity score to include a document.
-    mmr_lambda       : MMR diversity trade-off.
-                       1.0 = pure relevance; 0.0 = maximum diversity.
+    Tham số
+    -------
+    vector_store     : VectorStore của LangChain đã nạp dữ liệu.
+    top_k            : Số document cuối, sau MMR.
+    candidate_k      : Số ứng viên lấy trước khi lọc, khoảng 2–5× top_k.
+    score_threshold  : Điểm tương đồng tối thiểu để giữ document.
+    mmr_lambda       : Cân bằng liên quan / đa dạng của MMR.
+                       1.0 = thuần liên quan; 0.0 = đa dạng tối đa.
     """
 
     def __init__(
@@ -52,7 +50,7 @@ class ContextualRetriever(BaseRetriever):
         query  = result.queries[0] if result.queries else result.original_query
         filter = result.metadata_filter
 
-        # Score-threshold filtered dense search
+        # Tìm dense có lọc theo ngưỡng điểm
         candidates = self._search(
             query=query, k=self.candidate_k, filter=filter,
             search_type="similarity_score_threshold",
@@ -61,7 +59,7 @@ class ContextualRetriever(BaseRetriever):
         if not candidates:
             candidates = self._search(query=query, k=self.candidate_k, filter=filter)
 
-        # MMR re-ranking for diversity
+        # Xếp lại bằng MMR để tăng đa dạng
         try:
             return self.vector_store.max_marginal_relevance_search(
                 query,

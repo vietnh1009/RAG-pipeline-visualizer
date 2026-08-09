@@ -3,26 +3,16 @@ pre_retrieval/step_back.py
 ===========================
 Step-Back Prompting (Zheng et al., 2023 — Google DeepMind).
 
-Generates a broader, more abstract version of the user question to first
-retrieve background context, then uses that context when answering the
-specific question.
+Sinh thêm một câu hỏi rộng và trừu tượng hơn để lấy kiến thức nền, rồi dùng
+kiến thức đó khi trả lời câu hỏi cụ thể.
 
-Example
--------
-Specific  : "What is the recommended metformin dose for a 70 kg patient?"
-Step-back : "What are the general principles of metformin dosing?"
+    Cụ thể  : "Liều metformin khuyến cáo cho bệnh nhân 70 kg là bao nhiêu?"
+    Lùi lại : "Nguyên tắc chung khi kê liều metformin là gì?"
 
-The step-back query retrieves general background knowledge that helps
-ground the answer to the specific question.
+Cả câu lùi lại lẫn query gốc đều nằm trong ``result.queries``, nên retrieval
+chạy cả hai rồi gộp — LLM nhận được vừa bối cảnh nền vừa bằng chứng cụ thể.
 
-Retrieval behaviour
--------------------
-Both the step-back query AND the original query are in ``result.queries``.
-The retrieval stage retrieves for both and merges results, so the LLM
-receives background context alongside specific evidence.
-
-Use when: queries require background knowledge to answer correctly;
-          users ask very specific questions that lack broader context.
+Dùng khi: câu hỏi rất hẹp, muốn trả lời đúng phải có kiến thức nền.
 """
 
 from __future__ import annotations
@@ -33,11 +23,11 @@ from utils.llm import call_llm
 
 class StepBackTransformer(BaseTransformer):
     """
-    Generate a broader background question alongside the original query.
+    Sinh câu hỏi nền rộng hơn, đi kèm query gốc.
 
-    Parameters
-    ----------
-    include_original : Also retrieve with the original query (recommended).
+    Tham số
+    -------
+    include_original : Truy hồi thêm bằng query gốc (khuyến nghị bật).
     language         : "vi" | "en" | "both"
     """
 

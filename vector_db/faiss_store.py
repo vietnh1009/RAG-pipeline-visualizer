@@ -1,28 +1,23 @@
 """
 vector_db/faiss_store.py
 =========================
-FAISS local vector store (Meta AI).
+FAISS (Meta AI) — chạy hoàn toàn trong process, không server, không API key,
+không cần mạng.
 
-Runs entirely in-process — no server, no API key, no network.
-The index is persisted to two files on disk:
-    <persist_dir>/index.faiss
-    <persist_dir>/index.pkl
-(persist_dir already includes collection name: ./storage/faiss_{collection_name})
+Index lưu thành hai file: ``<persist_dir>/index.faiss`` và ``index.pkl``
+(persist_dir đã bao gồm tên collection: ./storage/faiss_{collection_name}).
 
-Re-index prevention
--------------------
-A ``fingerprint.json`` file tracks the MD5 of the corpus.
-If the corpus has not changed since the last run, the existing index
-is loaded without re-embedding.
+Tránh index lại: file ``fingerprint.json`` giữ MD5 của corpus; corpus không đổi
+thì nạp index cũ, khỏi embed lại.
 
-Limitations
------------
-- No native metadata filtering (filter after retrieval).
-- No hybrid search (pair with a BM25 SparseEmbedder separately).
-- Not suitable for > ~10 M vectors on a single machine.
+Hạn chế
+-------
+- Không lọc metadata sẵn có — phải lọc sau khi truy hồi.
+- Không hybrid search — muốn thì ghép thêm SparseEmbedder BM25.
+- Không hợp cho hơn ~10 triệu vector trên một máy.
 
-Scale   : < 10 M vectors
-Use when: prototyping, offline pipelines, no server available.
+Quy mô  : < 10 triệu vector
+Dùng khi: làm prototype, pipeline offline, không có server.
 """
 
 from __future__ import annotations
@@ -41,11 +36,13 @@ logger = logging.getLogger(__name__)
 
 class FAISSVectorStore(BaseVectorStore):
     """
-    Parameters
-    ----------
-    collection_name : Sub-directory name inside persist_dir.
-    persist_dir     : Root directory for FAISS index files.
-    force_reindex   : Wipe and rebuild even if corpus is unchanged.
+    Vector store FAISS.
+
+    Tham số
+    -------
+    collection_name : Tên thư mục con bên trong persist_dir.
+    persist_dir     : Thư mục gốc chứa file index FAISS.
+    force_reindex   : Xoá và dựng lại kể cả khi corpus không đổi.
     """
 
     def __init__(
@@ -61,10 +58,10 @@ class FAISSVectorStore(BaseVectorStore):
         from langchain_community.vectorstores import FAISS
 
         lc_embedder = self._langchain_embedder(embedder)
-        idx_dir     = Path(self.persist_dir)   # persist_dir already is the index dir
+        idx_dir     = Path(self.persist_dir)   # persist_dir chính là thư mục index
         fp_path     = str(idx_dir / "fingerprint.json")
 
-        # Load existing index if corpus is unchanged
+        # Corpus chưa đổi thì nạp lại index cũ
         if idx_dir.exists() and not self.force_reindex and not corpus_changed(chunks, fp_path):
             logger.info("FAISS: loading existing index from '%s'.", idx_dir)
             return FAISS.load_local(
@@ -73,7 +70,7 @@ class FAISSVectorStore(BaseVectorStore):
                 allow_dangerous_deserialization=True,
             )
 
-        # Build new index
+        # Dựng index mới
         logger.info("FAISS: building index for %d chunks.", len(chunks))
         store = FAISS.from_documents(documents=self.sanitize_metadata(chunks), embedding=lc_embedder)
 

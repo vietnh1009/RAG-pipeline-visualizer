@@ -1,24 +1,17 @@
 """
 pre_retrieval/self_query.py
 ============================
-Self-Query — extract structured metadata filters from natural language.
+Self-Query — trích metadata filter có cấu trúc từ câu hỏi ngôn ngữ tự nhiên.
 
-Users often embed filter conditions in their queries without realising it:
-  "Show me Vietnamese policy documents about diabetes from 2024"
+Người dùng thường gài sẵn điều kiện lọc mà không nhận ra:
+  "Cho tôi tài liệu chính sách tiếng Việt về tiểu đường năm 2024"
+  → query ngữ nghĩa : "chính sách tiểu đường"
+  → filter          : {"language": "vi", "doc_type": "policy", "year": 2024}
 
-A self-query transformer parses this into:
-  Semantic query   : "diabetes policy"
-  Metadata filters : {"language": "vi", "doc_type": "policy", "year": 2024}
+Filter được đẩy xuống vector DB để thu hẹp không gian tìm *trước* khi chạy ANN —
+rẻ hơn nhiều so với lọc sau khi đã truy hồi.
 
-The filter is then passed to the vector DB to narrow the search space
-*before* (or during) ANN retrieval, which is much more efficient than
-post-retrieval filtering.
-
-Available filter fields are defined by the ``schema`` parameter — a dict
-mapping field names to their types and descriptions.
-
-Use when: corpus has rich metadata; users frequently specify constraints
-          in natural language (date, source, language, category, etc.).
+Các trường lọc hợp lệ do tham số ``schema`` quy định.
 """
 
 from __future__ import annotations
@@ -32,18 +25,15 @@ from utils.llm import call_llm
 
 class SelfQueryTransformer(BaseTransformer):
     """
-    Parse metadata filters from the user query.
+    Trích metadata filter từ query của người dùng.
 
-    Parameters
-    ----------
-    schema   : Dict mapping filterable field names to descriptions.
-               Example::
-                 {
-                   "language": "document language: 'vi' or 'en'",
-                   "year":     "publication year as integer",
-                   "source":   "filename of the source document",
-                   "doc_type": "type: 'guideline', 'report', 'faq'"
-                 }
+    Tham số
+    -------
+    schema   : Dict tên trường lọc → mô tả, ví dụ::
+                 {"language": "ngôn ngữ tài liệu: 'vi' hoặc 'en'",
+                  "year":     "năm xuất bản, kiểu số nguyên",
+                  "source":   "tên file tài liệu nguồn"}
+               Schema rỗng thì transformer trả query nguyên vẹn.
     language : "vi" | "en" | "both"
     """
 

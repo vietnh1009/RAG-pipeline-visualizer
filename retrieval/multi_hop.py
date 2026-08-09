@@ -1,24 +1,22 @@
 """
 retrieval/multi_hop.py
 =======================
-Multi-Hop Retrieval — iterative retrieve-then-reason for complex questions.
+Multi-Hop Retrieval — lặp truy hồi rồi suy luận, cho câu hỏi nhiều bước.
 
-Multi-hop questions require chaining multiple retrieval steps:
-  Q: "Who founded the company that acquired DeepMind?"
-  Hop 1: retrieve → "Google acquired DeepMind"
-  Hop 2: retrieve → "Larry Page and Sergey Brin founded Google"
-  Answer: Larry Page and Sergey Brin
+  Hỏi   : "Ai sáng lập công ty đã mua DeepMind?"
+  Bước 1: truy hồi → "Google mua DeepMind"
+  Bước 2: truy hồi → "Larry Page và Sergey Brin sáng lập Google"
 
-Algorithm
----------
-1. Retrieve k docs for the current query.
-2. Feed accumulated context to the LLM: should it continue or stop?
-3. If continue → generate a follow-up query and repeat.
-4. Stop when LLM says DONE or max_hops is reached.
-5. Return all retrieved docs deduplicated and capped to top_k.
+Thuật toán
+----------
+1. Truy hồi k document cho query hiện tại.
+2. Đưa toàn bộ ngữ cảnh đã gom cho LLM: đủ để trả lời chưa?
+3. Chưa đủ → LLM sinh query tiếp theo, lặp lại.
+4. Dừng khi LLM trả lời DONE hoặc chạm ``max_hops``.
+5. Trả về toàn bộ document đã gom, khử trùng và cắt còn top_k.
 
-Use when: multi-step reasoning, relationship chaining, comparison across
-          multiple documents that each contain only partial information.
+Dùng khi: cần suy luận nhiều bước, nối quan hệ, hoặc so sánh giữa nhiều tài
+liệu mà mỗi tài liệu chỉ chứa một phần thông tin.
 """
 
 from __future__ import annotations
@@ -46,15 +44,15 @@ _HOP_PROMPT = (
 
 class MultiHopRetriever(BaseRetriever):
     """
-    Iteratively retrieve and reason until the question can be answered.
+    Lặp truy hồi và suy luận cho tới khi đủ thông tin trả lời.
 
-    Parameters
-    ----------
-    vector_store : Populated LangChain VectorStore.
-    top_k        : Final documents returned (across all hops).
-    max_hops     : Maximum retrieval iterations.
-    candidate_k  : Documents to retrieve per hop.
-    llm_model    : LLM used to decide whether to continue.
+    Tham số
+    -------
+    vector_store : VectorStore của LangChain đã nạp dữ liệu.
+    top_k        : Số document cuối, tính trên tất cả các bước.
+    max_hops     : Số vòng truy hồi tối đa.
+    candidate_k  : Số document lấy mỗi vòng.
+    llm_model    : LLM quyết định dừng hay đi tiếp.
     llm_provider : "openai" | "anthropic" | "google"
     """
 

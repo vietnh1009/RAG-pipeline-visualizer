@@ -1,22 +1,16 @@
 """
 post_retrieval/llm_reranker.py
 ================================
-LLM Listwise Reranker (RankGPT-style, Sun et al. 2023).
+LLM Listwise Reranker (kiểu RankGPT, Sun et al. 2023).
 
-Presents the query and all retrieved documents to an LLM at once and
-asks it to output a relevance-ranked permutation index list.
-The LLM can reason about content relationships across documents
-simultaneously — something pairwise cross-encoders cannot do.
+Đưa query cùng toàn bộ document cho LLM trong một lần, yêu cầu trả về danh sách
+chỉ số đã sắp theo độ liên quan ("3,1,5,2,4", đánh số từ 1). LLM nhìn được quan
+hệ giữa các document cùng lúc — điều cross-encoder chấm từng cặp không làm được.
 
-Output format: "3,1,5,2,4" → reorder docs by these 1-indexed positions.
+Dùng khi: không có GPU cho cross-encoder; top_n nhỏ (≤ 10) để prompt vừa context;
+query phức tạp cần nhìn tổng thể.
 
-When to use
------------
-- No local GPU for cross-encoder inference.
-- Small top_n (≤ 10) — prompt fits comfortably in context window.
-- Complex queries where holistic reasoning improves ranking.
-
-Limitation: one LLM call per reranking operation; slow for large N.
+Hạn chế: mỗi lần rerank tốn một lời gọi LLM, chậm khi N lớn.
 """
 
 from __future__ import annotations
@@ -31,15 +25,15 @@ from utils.llm import call_llm
 
 class LLMReranker(BasePostProcessor):
     """
-    Listwise LLM reranker.
+    Rerank listwise bằng LLM.
 
-    Parameters
-    ----------
-    llm_model     : LLM for reranking.
+    Tham số
+    -------
+    llm_model     : LLM dùng để rerank.
     llm_provider  : "openai" | "anthropic" | "google"
-    top_n         : Documents to keep.
-    max_doc_chars : Max characters per document shown to the LLM.
-    language      : "vi" | "en" | "both" — controls prompt language.
+    top_n         : Số document giữ lại.
+    max_doc_chars : Số ký tự tối đa mỗi document đưa vào prompt.
+    language      : "vi" | "en" | "both" — ngôn ngữ prompt.
     """
 
     _PROMPT_EN = (
@@ -99,7 +93,7 @@ class LLMReranker(BasePostProcessor):
             doc.metadata["llm_rerank_position"] = rank + 1
             reranked.append(doc)
 
-        # Append any docs not mentioned by LLM
+        # Nối thêm các document LLM không nhắc tới
         mentioned = set(indices)
         for i, doc in enumerate(docs):
             if i not in mentioned:
@@ -109,7 +103,7 @@ class LLMReranker(BasePostProcessor):
 
     @staticmethod
     def _parse(raw: str, n: int) -> list[int]:
-        """Parse '3,1,5,2,4' → [2, 0, 4, 1, 3] (0-indexed)."""
+        """Đọc '3,1,5,2,4' → [2, 0, 4, 1, 3] (đánh số từ 0)."""
         indices: list[int] = []
         seen:    set[int]  = set()
         for num in re.findall(r"\d+", raw):

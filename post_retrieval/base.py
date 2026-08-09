@@ -1,14 +1,13 @@
 """
 post_retrieval/base.py
 ======================
-Abstract base class shared by all post-retrieval processors.
+Lớp ABC dùng chung cho mọi bộ xử lý sau truy hồi.
 
-Every processor follows the same contract:
-    processor = SomeProcessor(**options)
-    docs      = processor.process(query, docs) -> list[Document]
+Hợp đồng chung:
+    docs = SomeProcessor(**options).process(query, docs) -> list[Document]
 
-The query string is always available so processors that need it
-(rerankers, compressors, filters) can use it without extra state.
+Query luôn được truyền vào để reranker / compressor / filter dùng trực tiếp,
+không cần giữ thêm trạng thái.
 """
 
 from __future__ import annotations
@@ -19,19 +18,19 @@ from langchain_core.documents import Document
 
 
 class BasePostProcessor(ABC):
-    """Abstract base for all post-retrieval processing steps."""
+    """Lớp cơ sở cho mọi bước xử lý sau truy hồi."""
 
     @abstractmethod
     def process(self, query: str, docs: list[Document]) -> list[Document]:
         """
-        Process a list of retrieved documents and return a refined list.
+        Tinh lọc danh sách document đã truy hồi.
 
-        Parameters
-        ----------
-        query : The primary user query (or first query from TransformResult).
-        docs  : Raw retrieved documents from the retrieval stage.
-
-        Returns
+        Tham số
         -------
-        Possibly shorter, reordered, or compressed list of Documents.
+        query : Query chính của người dùng (hoặc query đầu trong TransformResult).
+        docs  : Document thô từ bước retrieval.
+
+        Trả về
+        ------
+        Danh sách Document có thể ngắn hơn, đổi thứ tự hoặc đã nén.
         """

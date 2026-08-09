@@ -1,21 +1,17 @@
 """
 vector_db/pinecone_store.py
 ============================
-Pinecone managed serverless vector database.
+Pinecone — vector DB serverless có quản lý: không phải vận hành, tự co giãn,
+API ổn định.
 
-Zero-ops, auto-scaling, stable API.
-Best for startups that want speed-to-market without infra management.
+Tránh index lại: xem ``index.describe_index_stats().total_vector_count``; lớn
+hơn 0 và force_reindex=False thì trả về index sẵn có.
 
-Re-index prevention
--------------------
-Checks ``index.describe_index_stats().total_vector_count``.
-If > 0 and force_reindex=False, the existing index is returned as-is.
+Quy mô  : ~ 1 tỷ vector (bản Serverless)
+Dùng khi: muốn cloud có quản lý, không tự vận hành hạ tầng.
+Hạn chế : phụ thuộc nhà cung cấp, chi phí tăng theo quy mô.
 
-Scale     : ~ 1 B vectors (Serverless)
-Use when  : managed cloud, no infra ops, auto-scale.
-Limitation: vendor lock-in, pricing grows with scale.
-
-Env var: PINECONE_API_KEY
+Biến môi trường: PINECONE_API_KEY
 """
 
 from __future__ import annotations
@@ -33,14 +29,16 @@ logger = logging.getLogger(__name__)
 
 class PineconeVectorStore(BaseVectorStore):
     """
-    Parameters
-    ----------
-    collection_name : Pinecone index name.
-    dimension       : Embedding vector dimension (must match the model).
+    Vector store Pinecone.
+
+    Tham số
+    -------
+    collection_name : Tên index trong Pinecone.
+    dimension       : Số chiều vector, phải khớp model embedding.
     metric          : "cosine" | "euclidean" | "dotproduct"
-    cloud           : Cloud provider for serverless ("aws" | "gcp" | "azure").
-    region          : Cloud region (e.g. "us-east-1").
-    force_reindex   : Delete and recreate the index.
+    cloud           : Nhà cung cấp cho bản serverless ("aws" | "gcp" | "azure").
+    region          : Vùng, ví dụ "us-east-1".
+    force_reindex   : Xoá index và tạo lại.
     """
 
     def __init__(
@@ -67,7 +65,7 @@ class PineconeVectorStore(BaseVectorStore):
         lc_embedder = self._langchain_embedder(embedder)
         existing    = [idx.name for idx in pc.list_indexes()]
 
-        # Return existing index if populated
+        # Index đã có dữ liệu thì dùng lại
         if self.collection_name in existing and not self.force_reindex:
             index = pc.Index(self.collection_name)
             count = index.describe_index_stats().total_vector_count
@@ -75,12 +73,12 @@ class PineconeVectorStore(BaseVectorStore):
                 logger.info("Pinecone: index '%s' has %d vectors — skipping.", self.collection_name, count)
                 return _PVS(index=index, embedding=lc_embedder)
 
-        # Delete on force_reindex
+        # force_reindex: xoá index cũ
         if self.collection_name in existing and self.force_reindex:
             pc.delete_index(self.collection_name)
             existing = []
 
-        # Create serverless index
+        # Tạo index serverless
         if self.collection_name not in existing:
             logger.info("Pinecone: creating index '%s'.", self.collection_name)
             pc.create_index(

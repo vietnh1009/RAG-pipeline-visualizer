@@ -1,20 +1,18 @@
 """
 post_retrieval/cohere_reranker.py
 ==================================
-Cohere Rerank API.
+Cohere Rerank API — model huấn luyện riêng cho việc rerank, hỗ trợ 100+ ngôn ngữ
+kể cả tiếng Việt.
 
-Cohere's reranker is trained specifically for retrieval reranking and
-supports 100+ languages including Vietnamese.
+Model
+-----
+  rerank-v3.5              Mới nhất, chất lượng tốt nhất, đa ngôn ngữ
+  rerank-multilingual-v3.0 Bản đa ngôn ngữ đời trước
+  rerank-english-v3.0      Chỉ tiếng Anh, nhanh hơn chút
 
-Models
-------
-  rerank-v3.5              Latest, best quality, multilingual
-  rerank-multilingual-v3.0 Previous multilingual model
-  rerank-english-v3.0      English only, slightly faster
+Chất lượng tiếng Việt: ⭐⭐⭐⭐⭐ — thuộc nhóm tốt nhất trong các lựa chọn qua API.
 
-Vietnamese quality: ⭐⭐⭐⭐⭐ — one of the best API options.
-
-Env var: COHERE_API_KEY
+Biến môi trường: COHERE_API_KEY
 """
 
 from __future__ import annotations
@@ -26,10 +24,12 @@ from post_retrieval.base import BasePostProcessor
 
 class CohereReranker(BasePostProcessor):
     """
-    Parameters
-    ----------
-    model_name : Cohere rerank model identifier.
-    top_n      : Documents to keep after reranking.
+    Rerank bằng Cohere Rerank API.
+
+    Tham số
+    -------
+    model_name : Tên model rerank của Cohere.
+    top_n      : Số document giữ lại sau rerank.
     """
 
     def __init__(self, model_name: str = "rerank-v3.5", top_n: int = 5):

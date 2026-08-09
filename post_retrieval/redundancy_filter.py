@@ -1,13 +1,13 @@
 """
 post_retrieval/redundancy_filter.py
 =====================================
-Semantic Near-Duplicate Filter — drop near-identical chunks after retrieval.
+Lọc đoạn gần trùng về ngữ nghĩa sau khi truy hồi.
 
-Unlike exact deduplication (MD5), this catches paraphrased or lightly
-reformatted versions of the same content using cosine similarity.
+Khác khử trùng chính xác (MD5), lớp này dùng cosine similarity nên bắt được cả
+những đoạn diễn đạt lại hoặc chỉ đổi cách trình bày.
 
-Use when: multiple retrieval queries (multi_query, hybrid) are used and the
-          merged results contain many near-duplicate passages.
+Dùng khi: chạy nhiều query (multi_query, hybrid) và kết quả gộp lại có nhiều
+đoạn na ná nhau.
 """
 
 from __future__ import annotations
@@ -19,15 +19,14 @@ from post_retrieval.base import BasePostProcessor
 
 class RedundancyFilter(BasePostProcessor):
     """
-    Drop documents whose semantic similarity to an already-kept document
-    exceeds the threshold.
+    Bỏ document có độ tương đồng ngữ nghĩa vượt ngưỡng so với document đã giữ.
 
-    Parameters
-    ----------
-    top_n           : Max documents to keep after filtering.
-    threshold       : Cosine similarity above which a doc is near-duplicate.
-    embedding_model : sentence-transformers model for similarity computation.
-                      Falls back to Jaccard when None.
+    Tham số
+    -------
+    top_n           : Số document tối đa giữ lại.
+    threshold       : Ngưỡng cosine để coi là gần trùng.
+    embedding_model : Model sentence-transformers để tính tương đồng.
+                      None thì lùi về Jaccard.
     """
 
     def __init__(

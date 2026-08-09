@@ -1,20 +1,18 @@
 """
 post_retrieval/context_compressor.py
 ======================================
-LLM-based Contextual Compression (Gao et al., 2023).
+Nén ngữ cảnh bằng LLM (Gao et al., 2023).
 
-For each retrieved document, asks an LLM to extract ONLY the sentences
-relevant to the query — discarding surrounding irrelevant content.
+Với mỗi document, nhờ LLM giữ lại CHỈ những câu liên quan tới query và bỏ phần
+còn lại.
 
-Modes
------
-extract   : LLM copies the relevant sentences verbatim.
-            Preserves exact wording; good for citation-heavy use cases.
-summarise : LLM writes a concise paraphrase of the relevant parts.
-            Shorter output; less token usage downstream.
+Hai chế độ
+----------
+extract   : Chép nguyên văn các câu liên quan. Giữ đúng chữ, hợp khi cần trích dẫn.
+summarise : Diễn giải ngắn gọn phần liên quan. Kết quả ngắn hơn, đỡ tốn token.
 
-Use when: chunks are large (500–1000 tokens) and only a fraction answers
-          the query; context window is the bottleneck.
+Dùng khi: chunk lớn (500–1000 token) mà chỉ một phần nhỏ trả lời được câu hỏi,
+và context window là nút thắt.
 """
 
 from __future__ import annotations
@@ -30,15 +28,15 @@ _NOT_RELEVANT = {"NOT_RELEVANT", "KHÔNG_LIÊN_QUAN", ""}
 
 class ContextCompressor(BasePostProcessor):
     """
-    Extract or summarise relevant content from each document.
+    Trích hoặc tóm tắt phần nội dung liên quan trong từng document.
 
-    Parameters
-    ----------
-    llm_model         : LLM for compression.
+    Tham số
+    -------
+    llm_model         : LLM dùng để nén.
     llm_provider      : "openai" | "anthropic" | "google"
     mode              : "extract" | "summarise"
-    max_output_tokens : Max tokens in the compressed output per document.
-    min_chars         : Drop document if compressed result is shorter than this.
+    max_output_tokens : Số token tối đa cho kết quả nén mỗi document.
+    min_chars         : Kết quả ngắn hơn ngưỡng này thì bỏ luôn document.
     language          : "vi" | "en" | "both"
     """
 

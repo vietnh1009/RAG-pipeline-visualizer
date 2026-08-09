@@ -1,23 +1,18 @@
 """
 pre_retrieval/query_router.py
 ==============================
-Query Routing — direct the query to the most appropriate retrieval path.
+Query Routing — đưa query tới nhánh truy hồi phù hợp nhất.
 
-Different types of documents or domains may be stored in separate
-collections or require different retrieval strategies. The router selects
-the best path and stores it in ``TransformResult.retrieval_path``.
+Mỗi miền tài liệu có thể nằm ở collection riêng hoặc cần chiến lược truy hồi
+riêng. Router chọn nhánh và ghi vào ``TransformResult.retrieval_path``.
 
-Routing modes
--------------
-``llm``     : LLM classifies the query against route descriptions.
-              Best quality; costs one API call per query.
-``keyword`` : Fast rule-based routing using regex pattern matching.
-              No LLM needed; deterministic; easy to maintain.
-``semantic``: Cosine similarity between query embedding and route embeddings.
-              Good balance between quality and cost.
+Ba chế độ
+---------
+``llm``      : LLM phân loại query theo mô tả từng nhánh. Tốt nhất, tốn 1 lần gọi API.
+``keyword``  : Khớp regex theo luật. Không cần LLM, tất định, dễ bảo trì.
+``semantic`` : Cosine similarity giữa embedding query và embedding mô tả nhánh.
 
-Use when: knowledge base spans multiple domains or collections; different
-          query types need different retrieval strategies or LLMs.
+Dùng khi: kho tri thức trải nhiều miền, hoặc từng loại query cần chiến lược khác nhau.
 """
 
 from __future__ import annotations
@@ -30,21 +25,17 @@ from utils.llm import call_llm
 
 class QueryRouter(BaseTransformer):
     """
-    Route the query to one of the defined retrieval paths.
+    Định tuyến query vào một trong các nhánh truy hồi đã khai báo.
 
-    Parameters
-    ----------
-    routes        : Dict mapping route name → description.
-                    Example::
-                      {
-                        "medical": "questions about diseases, treatments, drugs",
-                        "legal":   "questions about laws, regulations, contracts",
-                        "general": "all other questions"
-                      }
+    Tham số
+    -------
+    routes        : Dict tên nhánh → mô tả, ví dụ::
+                      {"medical": "câu hỏi về bệnh, thuốc, điều trị",
+                       "legal":   "câu hỏi về luật, quy định, hợp đồng",
+                       "general": "các câu hỏi còn lại"}
     mode          : "llm" | "keyword" | "semantic"
-    route_rules   : For keyword mode — list of (regex_pattern, route_name) tuples.
-                    First match wins.
-    default_route : Fallback when no match is found.
+    route_rules   : Chế độ keyword — list (regex, tên_nhánh), khớp đầu tiên thắng.
+    default_route : Nhánh dự phòng khi không khớp gì.
     language      : "vi" | "en" | "both"
     """
 

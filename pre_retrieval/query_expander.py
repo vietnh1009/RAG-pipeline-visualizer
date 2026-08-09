@@ -1,23 +1,20 @@
 """
 pre_retrieval/query_expander.py
 ================================
-Query Expansion — enrich the query with synonyms and related terms.
+Query Expansion — bổ sung từ đồng nghĩa và từ liên quan vào query.
 
-Why it helps
-------------
-Vocabulary mismatch is one of the most common causes of retrieval failure:
-the user writes "đái tháo đường" but the document uses "tiểu đường" or
-"glucose". Expansion ensures both forms are searched simultaneously.
+Lệch từ vựng là một trong những nguyên nhân hỏng truy hồi phổ biến nhất: người
+dùng gõ "đái tháo đường" còn tài liệu viết "tiểu đường" hoặc "glucose". Mở rộng
+query để cả hai dạng cùng được tìm.
 
-Two modes
----------
-``llm``     : LLM generates semantically related alternative phrasings.
-              Better quality; costs API tokens.
-``wordnet`` : NLTK WordNet synonym expansion (English only, free, offline).
+Hai chế độ
+----------
+``llm``     : LLM sinh các cách diễn đạt tương đương. Chất lượng tốt hơn, tốn token.
+``wordnet`` : NLTK WordNet, chỉ tiếng Anh, miễn phí và chạy offline.
 
-The original query is always included alongside the expanded terms.
+Query gốc luôn được giữ cùng với các từ mở rộng.
 
-Use when: domain terminology is inconsistent; users use informal synonyms.
+Dùng khi: thuật ngữ trong miền không nhất quán, người dùng hay dùng từ thông tục.
 """
 
 from __future__ import annotations
@@ -28,12 +25,12 @@ from utils.llm import call_llm, parse_json_list
 
 class QueryExpander(BaseTransformer):
     """
-    Expand the query with synonyms and alternative phrasings.
+    Mở rộng query bằng từ đồng nghĩa và cách diễn đạt khác.
 
-    Parameters
-    ----------
+    Tham số
+    -------
     mode           : "llm" | "wordnet"
-    num_expansions : Number of additional terms / phrases to add.
+    num_expansions : Số từ / cụm bổ sung.
     language       : "vi" | "en" | "both"
     """
 

@@ -1,27 +1,21 @@
 """
 pre_retrieval/pipeline.py
 ==========================
-PreRetrievalPipeline — orchestrate multiple transformers in sequence.
+PreRetrievalPipeline — chạy lần lượt nhiều transformer rồi gộp kết quả.
 
-Each transformer in ``transformations`` is applied to the original query.
-Their outputs are merged into a single TransformResult:
-  - All generated queries are accumulated and deduplicated.
-  - metadata_filter, intent, retrieval_path — last writer wins.
-  - extra dicts are merged (later keys overwrite earlier ones).
+Cách gộp:
+  - Mọi query sinh ra được cộng dồn và bỏ trùng.
+  - metadata_filter, intent, retrieval_path — người ghi sau thắng.
+  - extra được merge, key sau đè key trước.
+  - Query gốc luôn có mặt trong danh sách cuối.
 
-The original query is always guaranteed to be in the final query list.
-
-Usage
+Ví dụ
 -----
     pipeline = PreRetrievalPipeline(
         transformations=["rewrite", "multi_query"],
-        llm_model="gpt-4.1-mini",
-        llm_provider="openai",
-        language="both",
         multi_query_count=3,
     )
-    result = pipeline.transform("how does rag work?")
-    # result.queries -> ["How does RAG work?", "sub-q1", "sub-q2", "sub-q3"]
+    pipeline.transform("rag hoạt động thế nào?").queries
 """
 
 from __future__ import annotations
@@ -36,17 +30,17 @@ logger = logging.getLogger(__name__)
 
 class PreRetrievalPipeline:
     """
-    Chain multiple pre-retrieval transformers and merge their outputs.
+    Nối nhiều pre-retrieval transformer và gộp kết quả của chúng.
 
-    Parameters
-    ----------
-    transformations : Ordered list of strategy names.
-                      Valid names: none, rewrite, expand, hyde, step_back,
+    Tham số
+    -------
+    transformations : Danh sách tên chiến lược, theo thứ tự áp dụng.
+                      Hợp lệ: none, rewrite, expand, hyde, step_back,
                       multi_query, decompose, self_query, route.
-    llm_model       : LLM used by all LLM-based transformers.
+    llm_model       : LLM cho mọi transformer dùng LLM.
     llm_provider    : "openai" | "anthropic" | "google"
     language        : "vi" | "en" | "both"
-    **kwargs        : Per-strategy overrides (see _build for supported keys).
+    **kwargs        : Tuỳ chọn riêng từng chiến lược — xem ``_build``.
     """
 
     def __init__(
@@ -67,19 +61,19 @@ class PreRetrievalPipeline:
         ]
 
     def transform(self, query: str) -> TransformResult:
-        """Apply all transformers to the query and return a merged result."""
+        """Chạy toàn bộ transformer trên query và trả về kết quả đã gộp."""
         merged        = TransformResult(original_query=query, queries=[])
-        current_query = query  # updated by transformers that rewrite (single replacement)
+        current_query = query  # transformer nào viết lại query sẽ cập nhật biến này
 
         for transformer in self._transformers:
             result = transformer.transform(current_query)
 
-            # Accumulate queries (deduplicated)
+            # Cộng dồn query, bỏ trùng
             for q in result.queries:
                 if q and q not in merged.queries:
                     merged.queries.append(q)
 
-            # Last-writer-wins for structured fields
+            # Các trường có cấu trúc: người ghi sau thắng
             if result.metadata_filter is not None:
                 merged.metadata_filter = result.metadata_filter
             if result.intent is not None:
@@ -89,14 +83,14 @@ class PreRetrievalPipeline:
 
             merged.extra.update(result.extra)
 
-            # If transformer replaced the query (single non-original result)
-            # update current_query so subsequent transformers chain correctly
+            # Transformer thay hẳn query (trả đúng 1 kết quả khác query gốc):
+            # cập nhật current_query để các transformer sau nối tiếp đúng
             if (len(result.queries) == 1
                     and result.queries[0] != query
                     and result.queries[0] != current_query):
                 current_query = result.queries[0]
 
-        # Guarantee original query is always present
+        # Bảo đảm query gốc luôn có mặt
         if query not in merged.queries:
             merged.queries.insert(0, query)
 
@@ -111,7 +105,7 @@ class PreRetrievalPipeline:
     # ------------------------------------------------------------------
 
     def _build(self, name: str) -> BaseTransformer:
-        """Instantiate a transformer from its strategy name."""
+        """Khởi tạo một transformer theo tên chiến lược."""
         kw = self.strategy_kwargs
         base = dict(
             llm_model=self.llm_model,

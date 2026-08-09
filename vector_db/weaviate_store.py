@@ -1,22 +1,20 @@
 """
 vector_db/weaviate_store.py
 ============================
-Weaviate vector database — native hybrid search, GraphQL API.
+Weaviate — hybrid search sẵn có, API GraphQL.
 
-Weaviate stores both dense vectors and BM25 term frequencies natively,
-making it one of the best choices for hybrid retrieval out of the box.
+Weaviate lưu đồng thời vector dense và tần suất từ BM25, nên hybrid retrieval
+dùng được ngay không cần ghép thêm gì.
 
-Note: Weaviate collection names MUST start with an uppercase letter.
-      This wrapper auto-capitalises the collection_name.
+Lưu ý: tên collection của Weaviate BẮT BUỘC bắt đầu bằng chữ hoa — lớp bọc này
+tự viết hoa chữ cái đầu của ``collection_name``.
 
-Re-index prevention
--------------------
-Queries the aggregate object count before inserting.
+Tránh index lại: đếm số object hiện có trước khi nạp.
 
-Scale     : ~ 1 B vectors
-Use when  : hybrid search, rich schema, GraphQL ecosystem.
+Quy mô  : ~ 1 tỷ vector
+Dùng khi: cần hybrid search, schema phong phú, hệ sinh thái GraphQL.
 
-Env vars (optional): WEAVIATE_URL, WEAVIATE_API_KEY
+Biến môi trường (tuỳ chọn): WEAVIATE_URL, WEAVIATE_API_KEY
 """
 
 from __future__ import annotations
@@ -34,12 +32,14 @@ logger = logging.getLogger(__name__)
 
 class WeaviateVectorStore(BaseVectorStore):
     """
-    Parameters
-    ----------
-    collection_name : Weaviate class name (auto-capitalised).
-    url             : Weaviate server URL.
-    api_key         : Weaviate Cloud Services API key (None for self-hosted).
-    force_reindex   : Delete the class and rebuild from scratch.
+    Vector store Weaviate.
+
+    Tham số
+    -------
+    collection_name : Tên class Weaviate, tự viết hoa chữ đầu.
+    url             : URL server Weaviate.
+    api_key         : API key Weaviate Cloud; None nếu tự dựng.
+    force_reindex   : Xoá class và dựng lại từ đầu.
     """
 
     def __init__(
@@ -49,7 +49,7 @@ class WeaviateVectorStore(BaseVectorStore):
         api_key:         str | None = None,
         force_reindex:   bool = False,
     ):
-        # Weaviate requires capitalised class names
+        # Weaviate bắt buộc tên class viết hoa chữ đầu
         name = collection_name[0].upper() + collection_name[1:]
         super().__init__(name, force_reindex)
         self.url     = os.environ.get("WEAVIATE_URL",     url)
@@ -70,7 +70,7 @@ class WeaviateVectorStore(BaseVectorStore):
             auth_credentials=auth,
         )
 
-        # Check existing object count
+        # Đếm object sẵn có
         if not self.force_reindex:
             try:
                 result = client.collections.get(self.collection_name).aggregate.over_all(total_count=True)
@@ -78,9 +78,9 @@ class WeaviateVectorStore(BaseVectorStore):
                     logger.info("Weaviate: class '%s' has %d objects — skipping.", self.collection_name, result.total_count)
                     return _WVS(client=client, index_name=self.collection_name, text_key="text", embedding=lc_embedder)
             except Exception:
-                pass  # class does not exist yet
+                pass  # class chưa tồn tại
 
-        # Delete existing class if force_reindex
+        # force_reindex: xoá class cũ
         try:
             client.collections.delete(self.collection_name)
         except Exception:
@@ -96,7 +96,7 @@ class WeaviateVectorStore(BaseVectorStore):
 
     @staticmethod
     def _parse_url(url: str) -> tuple[str, int]:
-        """Extract host and port from a URL string."""
+        """Tách host và port từ chuỗi URL."""
         stripped = url.replace("https://", "").replace("http://", "")
         if ":" in stripped:
             host, port_str = stripped.rsplit(":", 1)

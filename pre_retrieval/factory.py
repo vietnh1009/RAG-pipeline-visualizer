@@ -1,10 +1,10 @@
 """
 pre_retrieval/factory.py
 ========================
-Factory function and config-driven builder — single entry points.
+Hai điểm vào duy nhất để dựng pipeline biến đổi query.
 
-    build_pipeline(**kwargs)             -> PreRetrievalPipeline
-    build_pipeline_from_config(cfg)      -> PreRetrievalPipeline
+    build_pipeline(**kwargs)        -> PreRetrievalPipeline
+    build_pipeline_from_config(cfg) -> PreRetrievalPipeline
 """
 
 from __future__ import annotations
@@ -22,21 +22,20 @@ def build_pipeline(
     **kwargs: Any,
 ) -> PreRetrievalPipeline:
     """
-    Build a PreRetrievalPipeline with explicit parameters.
+    Dựng PreRetrievalPipeline từ tham số truyền thẳng.
 
-    Parameters
-    ----------
-    transformations : List of strategy names in order of application.
-                      Defaults to ["none"] (passthrough).
-    llm_model       : LLM for all LLM-based transformers.
+    Tham số
+    -------
+    transformations : Tên các chiến lược, theo thứ tự áp dụng.
+                      Mặc định ["none"] (không biến đổi).
+    llm_model       : LLM cho mọi transformer dùng LLM.
     llm_provider    : "openai" | "anthropic" | "google"
     language        : "vi" | "en" | "both"
-    **kwargs        : Per-strategy overrides:
-                        multi_query_count, num_expansions,
-                        self_query_schema, routes, routing_mode, ...
+    **kwargs        : Tuỳ chọn riêng từng chiến lược — multi_query_count,
+                      num_expansions, self_query_schema, routes, ...
 
-    Examples
-    --------
+    Ví dụ
+    -----
     >>> build_pipeline(["rewrite", "multi_query"], multi_query_count=4)
     """
     return PreRetrievalPipeline(
@@ -50,29 +49,14 @@ def build_pipeline(
 
 def build_pipeline_from_config(cfg: dict) -> PreRetrievalPipeline:
     """
-    Build a PreRetrievalPipeline from the ``query_pipeline.pre_retrieval``
-    section of config.yaml.
+    Dựng PreRetrievalPipeline từ mục ``query_pipeline.pre_retrieval`` của config.yaml.
 
-    Parameters
-    ----------
-    cfg : Full config dict from ``utils.config.load_config()``.
+    Tham số
+    -------
+    cfg : Dict config đầy đủ từ ``utils.config.load_config()``.
 
-    Config keys used
-    ----------------
-    query_pipeline.pre_retrieval.transformations   list of strategy names
-    query_pipeline.pre_retrieval.transformation_llm LLM model name
-    query_pipeline.pre_retrieval.multi_query_count  int
-    query_pipeline.pre_retrieval.hyde_doc_length    int
-    query_pipeline.pre_retrieval.expansion_mode     "llm" | "wordnet"
-    query_pipeline.pre_retrieval.num_expansions     int
-    query_pipeline.pre_retrieval.self_query_schema  dict
-    query_pipeline.pre_retrieval.routes             dict
-    query_pipeline.pre_retrieval.routing_mode       "llm" | "keyword" | "semantic"
-    query_pipeline.pre_retrieval.route_rules        list of [pattern, route] pairs
-    query_pipeline.pre_retrieval.default_route      str
-    query_pipeline.generation.provider              LLM provider
-    query_pipeline.generation.model_name            fallback LLM model
-    data.language                                   corpus language
+    Đọc thêm ``query_pipeline.generation`` (provider, model_name làm mặc định)
+    và ``data.language``, nên phải truyền config đầy đủ chứ không phải một mẩu.
     """
     pre_cfg = cfg["query_pipeline"]["pre_retrieval"]
     gen_cfg = cfg["query_pipeline"]["generation"]

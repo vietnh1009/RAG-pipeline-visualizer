@@ -1,27 +1,23 @@
 """
 vector_db/qdrant_store.py
 ==========================
-Qdrant vector database — best filtering (ACORN) and hybrid search.
+Qdrant — lọc metadata tốt nhất (ACORN) và có hybrid search.
 
-Can run:
-- Locally in-memory (url=":memory:" — no persistence)
-- Locally on disk   (url="http://localhost:6333", requires Docker)
-- Qdrant Cloud      (provide url + api_key)
+Ba cách chạy:
+- Trong bộ nhớ    (url=":memory:", không lưu lại)
+- Server cục bộ   (url="http://localhost:6333", cần tự dựng server)
+- Qdrant Cloud    (truyền url + api_key)
 
-ACORN filtering
----------------
-Qdrant's ACORN algorithm filters during HNSW graph traversal rather
-than as a post-processing step, giving near-identical recall with
-arbitrary metadata filters at any selectivity level.
+ACORN lọc ngay trong lúc duyệt đồ thị HNSW thay vì lọc sau, nên recall gần như
+không giảm dù filter metadata phức tạp hay chọn lọc gắt tới đâu.
 
-Re-index prevention
--------------------
-Checks ``collection_info.vectors_count`` before inserting.
+Tránh index lại: kiểm tra ``collection_info.vectors_count`` trước khi nạp.
 
-Scale     : ~ 1 B+ vectors
-Use when  : hybrid search, complex metadata filtering, self-host with cloud option.
+Quy mô  : ~ 1 tỷ+ vector
+Dùng khi: cần hybrid search, lọc metadata phức tạp, tự dựng nhưng vẫn có đường
+          lên cloud.
 
-Env vars (optional): QDRANT_URL, QDRANT_API_KEY
+Biến môi trường (tuỳ chọn): QDRANT_URL, QDRANT_API_KEY
 """
 
 from __future__ import annotations
@@ -39,15 +35,17 @@ logger = logging.getLogger(__name__)
 
 class QdrantVectorStore(BaseVectorStore):
     """
-    Parameters
-    ----------
-    collection_name : Qdrant collection name.
-    url             : Server URL or ":memory:" for in-process mode.
-    api_key         : Qdrant Cloud API key (None for self-hosted).
-    dimension       : Dense embedding dimension.
+    Vector store Qdrant.
+
+    Tham số
+    -------
+    collection_name : Tên collection trong Qdrant.
+    url             : URL server, hoặc ":memory:" để chạy trong process.
+    api_key         : API key Qdrant Cloud; None nếu tự dựng.
+    dimension       : Số chiều vector dense.
     distance        : "Cosine" | "Dot" | "Euclid"
-    on_disk         : Store vectors on disk to reduce RAM usage.
-    force_reindex   : Delete and recreate the collection.
+    on_disk         : Lưu vector xuống đĩa để đỡ tốn RAM.
+    force_reindex   : Xoá collection và tạo lại.
     """
 
     def __init__(
@@ -77,7 +75,7 @@ class QdrantVectorStore(BaseVectorStore):
         dist_map    = {"Cosine": Distance.COSINE, "Dot": Distance.DOT, "Euclid": Distance.EUCLID}
         existing    = [c.name for c in client.get_collections().collections]
 
-        # Return existing collection if populated
+        # Collection đã có dữ liệu thì dùng lại
         if self.collection_name in existing and not self.force_reindex:
             info  = client.get_collection(self.collection_name)
             count = info.vectors_count or 0
@@ -85,7 +83,7 @@ class QdrantVectorStore(BaseVectorStore):
                 logger.info("Qdrant: collection '%s' has %d vectors — skipping.", self.collection_name, count)
                 return _QVS(client=client, collection_name=self.collection_name, embedding=lc_embedder)
 
-        # Delete on force_reindex
+        # force_reindex: xoá collection cũ
         if self.collection_name in existing:
             client.delete_collection(self.collection_name)
 

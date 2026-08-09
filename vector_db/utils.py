@@ -1,7 +1,7 @@
 """
 vector_db/utils.py
 ==================
-Shared helpers used across vector store modules.
+Vân tay corpus — giúp store cục bộ biết có phải index lại hay không.
 """
 
 from __future__ import annotations
@@ -13,11 +13,10 @@ from pathlib import Path
 
 def corpus_fingerprint(chunks) -> str:
     """
-    Compute an MD5 hash that uniquely identifies a set of chunks.
+    Tính hash MD5 nhận diện duy nhất một tập chunk.
 
-    Used by local stores (FAISS, Chroma, LanceDB) to detect whether the
-    corpus has changed since the last index run.
-    Hashes each chunk's text content + source path.
+    Các store cục bộ (FAISS, Chroma, LanceDB) dùng để biết corpus có đổi so với
+    lần index trước không. Hash trên nội dung text + đường dẫn nguồn của mỗi chunk.
     """
     hasher = hashlib.md5()
     for chunk in chunks:
@@ -28,14 +27,14 @@ def corpus_fingerprint(chunks) -> str:
 
 
 def save_fingerprint(fingerprint: str, path: str) -> None:
-    """Persist a corpus fingerprint to disk."""
+    """Ghi vân tay corpus xuống đĩa."""
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(json.dumps({"fingerprint": fingerprint}))
 
 
 def load_fingerprint(path: str) -> str | None:
-    """Load a previously saved fingerprint; return None if not found."""
+    """Đọc vân tay đã lưu; không có thì trả về None."""
     try:
         return json.loads(Path(path).read_text()).get("fingerprint")
     except (FileNotFoundError, json.JSONDecodeError):
@@ -44,10 +43,10 @@ def load_fingerprint(path: str) -> str | None:
 
 def corpus_changed(chunks, fingerprint_path: str) -> bool:
     """
-    Return True if the corpus has changed since the last index run.
+    True nếu corpus đã đổi so với lần index trước.
 
-    Compares the current MD5 fingerprint against the one saved on disk.
-    Returns True (needs re-index) when no fingerprint file exists.
+    So vân tay MD5 hiện tại với bản lưu trên đĩa. Chưa có file vân tay thì trả
+    về True, tức là cần index lại.
     """
     current  = corpus_fingerprint(chunks)
     previous = load_fingerprint(fingerprint_path)

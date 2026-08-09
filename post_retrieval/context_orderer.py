@@ -1,25 +1,17 @@
 """
 post_retrieval/context_orderer.py
 ===================================
-Context Orderer — reorder chunks to mitigate "lost-in-the-middle".
+Sắp lại thứ tự chunk để giảm hiệu ứng "lost in the middle".
 
-Liu et al. (2023) showed that LLMs attend most strongly to content at
-the *beginning* and *end* of their context window. Information placed in
-the middle is frequently ignored during generation.
+Liu et al. (2023) chỉ ra LLM chú ý mạnh nhất vào phần *đầu* và *cuối* context;
+thông tin nằm giữa hay bị bỏ qua khi sinh câu trả lời.
 
-Ordering strategies
--------------------
-relevance : Descending relevance score (most relevant first).
-            Simple; assumes LLM reads top-to-bottom.
-reverse   : Ascending relevance (most relevant LAST).
-            Exploits recency bias in some LLM architectures.
-sandwich  : Most relevant at START and END; least relevant in the middle.
-            Maximises the chance that at least one highly-relevant chunk
-            falls in a well-attended position. ← Recommended default.
-original  : Keep the order returned by the retriever unchanged.
-
-Use when: context window contains many chunks and generation quality
-          is sensitive to ordering (most production RAG systems).
+Bốn chiến lược
+--------------
+relevance : Điểm liên quan giảm dần — liên quan nhất lên đầu.
+reverse   : Điểm tăng dần — liên quan nhất xuống cuối, tận dụng recency bias.
+sandwich  : Liên quan nhất ở đầu VÀ cuối, kém nhất nằm giữa. ← mặc định khuyến nghị.
+original  : Giữ nguyên thứ tự retriever trả về.
 """
 
 from __future__ import annotations
@@ -31,13 +23,13 @@ from post_retrieval.base import BasePostProcessor
 
 class ContextOrderer(BasePostProcessor):
     """
-    Reorder retrieved chunks to reduce lost-in-the-middle degradation.
+    Sắp lại chunk đã truy hồi để giảm suy giảm do "lost in the middle".
 
-    Parameters
-    ----------
+    Tham số
+    -------
     ordering  : "relevance" | "reverse" | "sandwich" | "original"
-    score_key : Metadata key holding the relevance score.
-                Falls back through rerank_score → relevance_score → rrf_score.
+    score_key : Key metadata chứa điểm liên quan. Nếu thiếu thì lần lượt thử
+                relevance_score → rrf_score → hybrid_score.
     """
 
     def __init__(
@@ -70,7 +62,7 @@ class ContextOrderer(BasePostProcessor):
             n = len(sorted_docs)
             if n <= 2:
                 return sorted_docs
-            # Best chunk first, worst chunk last, rest in middle
+            # Chunk tốt nhất lên đầu, kém nhất xuống cuối, còn lại kẹp ở giữa
             best  = sorted_docs[0]
             worst = sorted_docs[-1]
             mid   = sorted_docs[1:-1]

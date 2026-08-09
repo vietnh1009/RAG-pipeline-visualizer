@@ -1,20 +1,16 @@
 """
 vector_db/chroma_store.py
 ==========================
-ChromaDB local persistent vector store.
+ChromaDB — lưu vector cục bộ, dữ liệu nằm ở ``persist_dir`` và tồn tại qua các
+lần chạy; lần sau dùng lại collection cũ.
 
-Data is stored on disk at ``persist_dir``.  The collection persists
-between runs; on subsequent runs the existing collection is re-used.
+Tránh index lại: nếu collection đã có dữ liệu VÀ vân tay corpus khớp thì không
+embed lại, trả về collection sẵn có.
 
-Re-index prevention
--------------------
-If the target collection already has documents AND the corpus fingerprint
-matches, no embedding is done and the existing collection is returned.
+Có sẵn lọc metadata cơ bản.
 
-Supports basic metadata filtering natively.
-
-Scale   : < 10 M vectors
-Use when: local development, zero-config, Python-native projects.
+Quy mô  : < 10 triệu vector
+Dùng khi: phát triển cục bộ, không cần cấu hình, dự án thuần Python.
 """
 
 from __future__ import annotations
@@ -36,9 +32,10 @@ import functools
 @functools.lru_cache(maxsize=8)
 def _get_or_create_chroma_client(persist_dir: str):
     """
-    Module-level singleton Chroma PersistentClient, cache theo persist_dir.
-    lru_cache đảm bảo chỉ tạo 1 lần per path trong suốt vòng đời process —
-    tránh cả conflict settings lẫn overhead khởi tạo lặp lại.
+    PersistentClient của Chroma, cache theo persist_dir ở mức module.
+
+    lru_cache bảo đảm mỗi đường dẫn chỉ tạo client một lần trong suốt vòng đời
+    process — tránh xung đột settings và khỏi khởi tạo lặp.
     """
     import chromadb
     from chromadb.config import Settings
@@ -50,11 +47,13 @@ def _get_or_create_chroma_client(persist_dir: str):
 
 class ChromaVectorStore(BaseVectorStore):
     """
-    Parameters
-    ----------
-    collection_name : Chroma collection name.
-    persist_dir     : Directory where Chroma stores its SQLite + embeddings.
-    force_reindex   : Delete the collection and rebuild from scratch.
+    Vector store ChromaDB.
+
+    Tham số
+    -------
+    collection_name : Tên collection trong Chroma.
+    persist_dir     : Thư mục Chroma lưu SQLite và embedding.
+    force_reindex   : Xoá collection và dựng lại từ đầu.
     """
 
     def __init__(
@@ -66,8 +65,7 @@ class ChromaVectorStore(BaseVectorStore):
         super().__init__(collection_name, force_reindex)
         self.persist_dir = persist_dir
 
-    # không dùng @staticmethod + lru_cache trực tiếp trên method
-    # → dùng module-level cache thay thế (xem _chroma_client_cache bên dưới)
+    # Không đặt lru_cache thẳng lên method — dùng hàm cache ở mức module
     @staticmethod
     def _make_client(persist_dir: str):
         return _get_or_create_chroma_client(persist_dir)
@@ -79,14 +77,14 @@ class ChromaVectorStore(BaseVectorStore):
         lc_embedder = self._langchain_embedder(embedder)
         fp_path     = str(Path(self.persist_dir) / f"{self.collection_name}_fp.json")
 
-        # Wipe on force_reindex trước khi tạo client
+        # force_reindex: xoá sạch trước khi tạo client
         if self.force_reindex and Path(self.persist_dir).exists():
             shutil.rmtree(self.persist_dir, ignore_errors=True)
 
         # Dùng PersistentClient trực tiếp để tránh conflict settings
         client = self._make_client(self.persist_dir)
 
-        # Load existing collection nếu corpus chưa thay đổi
+        # Corpus chưa đổi thì nạp lại collection cũ
         if not self.force_reindex and Path(self.persist_dir).exists():
             if not corpus_changed(chunks, fp_path):
                 store = Chroma(

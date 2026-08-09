@@ -1,21 +1,21 @@
 """
 retrieval/factory.py
 ====================
-Factory function and config-driven builder — single entry points.
+Hai điểm vào duy nhất để tạo retriever.
 
     get_retriever(strategy, vector_store, **kwargs) -> BaseRetriever
     build_retriever_from_config(cfg, vector_store)  -> BaseRetriever
 
-Strategies
+Chiến lược
 ----------
-  dense           Standard ANN vector similarity search
-  sparse          BM25 keyword search
-  hybrid          Dense + BM25 fused (RRF / weighted / DBSF) ← recommended
-  multi_query     Run N queries from TransformResult, merge via RRF
-  parent_document Search child chunks, return parent context
-  sentence_window Search sentences, expand to ±window neighbours
-  multi_hop       Iterative retrieve-then-reason (LLM decides to continue)
-  contextual      Dense + score threshold + MMR diversity
+  dense           Tìm ANN theo độ tương đồng vector
+  sparse          Tìm từ khoá bằng BM25
+  hybrid          Dense + BM25, gộp bằng RRF / weighted / DBSF ← khuyến nghị
+  multi_query     Chạy các query trong TransformResult rồi gộp bằng RRF
+  parent_document Tìm chunk con, trả về chunk cha
+  sentence_window Tìm theo câu, mở rộng ±window câu lân cận
+  multi_hop       Lặp truy hồi rồi suy luận, LLM quyết định dừng hay đi tiếp
+  contextual      Dense + ngưỡng điểm + đa dạng hoá MMR
 """
 
 from __future__ import annotations
@@ -49,18 +49,18 @@ def get_retriever(
     **kwargs: Any,
 ) -> BaseRetriever:
     """
-    Instantiate a retriever by strategy name.
+    Khởi tạo retriever theo tên chiến lược.
 
-    Parameters
-    ----------
-    strategy     : One of the strategy keys in _REGISTRY.
-    vector_store : Populated LangChain VectorStore.
-    documents    : Full corpus list — required for sparse, hybrid,
-                   parent_document, sentence_window (BM25 / window expansion).
-    **kwargs     : Constructor arguments forwarded to the retriever.
+    Tham số
+    -------
+    strategy     : Một trong các key của ``_REGISTRY``.
+    vector_store : VectorStore của LangChain đã nạp dữ liệu.
+    documents    : Toàn bộ corpus — bắt buộc cho sparse, hybrid,
+                   parent_document, sentence_window (BM25 / mở rộng cửa sổ).
+    **kwargs     : Tham số khởi tạo chuyển thẳng cho lớp retriever.
 
-    Examples
-    --------
+    Ví dụ
+    -----
     >>> get_retriever("dense",   store, top_k=10)
     >>> get_retriever("hybrid",  store, documents=chunks, fusion_method="rrf")
     >>> get_retriever("multi_hop", store, max_hops=3, llm_model="gpt-4.1-mini")
@@ -74,7 +74,7 @@ def get_retriever(
     module_path, class_name = entry
     cls = getattr(importlib.import_module(module_path), class_name)
 
-    # Inject documents for strategies that need corpus access
+    # Tiêm corpus vào các chiến lược cần truy cập toàn bộ tài liệu
     _docs_strategies = {"sparse", "hybrid", "sentence_window", "parent_document"}
     if strategy in _docs_strategies and documents is not None:
         kwargs["documents"] = documents
@@ -89,19 +89,12 @@ def build_retriever_from_config(
     documents:    list[Document] | None = None,
 ) -> BaseRetriever:
     """
-    Build a retriever from the ``query_pipeline.retrieval`` section of config.yaml.
+    Dựng retriever từ mục ``query_pipeline.retrieval`` của config.yaml.
 
-    Config keys used
-    ----------------
-    query_pipeline.retrieval.strategy           retrieval strategy name
-    query_pipeline.retrieval.top_k              number of results
-    query_pipeline.retrieval.fusion_method      "rrf" | "weighted" | "dbsf"
-    query_pipeline.retrieval.rrf_k              RRF constant (default 60)
-    query_pipeline.retrieval.hybrid_alpha       dense weight 0–1 (weighted fusion)
-    query_pipeline.retrieval.score_threshold    min similarity score (dense/contextual)
-    query_pipeline.retrieval.sentence_window_size  expansion window (sentence_window)
-    query_pipeline.generation.provider         LLM provider (multi_hop)
-    query_pipeline.generation.model_name       LLM model (multi_hop)
+    Tuỳ chiến lược mà đọc thêm: ``fusion_method`` / ``rrf_k`` / ``hybrid_alpha``
+    (hybrid), ``score_threshold`` (dense, contextual), ``sentence_window_size``
+    (sentence_window). Chiến lược multi_hop lấy LLM từ
+    ``query_pipeline.generation``, nên phải truyền config đầy đủ.
     """
     ret_cfg  = cfg["query_pipeline"]["retrieval"]
     gen_cfg  = cfg["query_pipeline"]["generation"]
