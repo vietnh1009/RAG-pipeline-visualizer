@@ -1,0 +1,89 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# LOADER nâng cao
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Marker — PDF → Markdown chất lượng cao (bảng, LaTeX). Tải ~1.5 GB model lần đầu.
+marker-pdf==1.6.2
+
+# Docling — IBM Research parser, Markdown output rất sạch.
+#
+docling==2.115.0
+docling-core==2.88.0
+docling-ibm-models==3.13.3
+docling-parse==7.8.1
+docling-slim==2.115.0
+
+# Unstructured — OCR + bảng + ảnh, tốt nhất cho PDF scan.
+# Cần thêm gói hệ thống: poppler-utils, tesseract-ocr, tesseract-ocr-vie
+unstructured[pdf]==0.16.12
+
+# OpenDataLoader PDF — #1 benchmark (0.90), bounding box, không cần GPU.
+# ⚠️ CẦN JAVA 11+ trên máy (không cài được bằng pip). Kiểm tra: java -version
+#
+# CHỌN ĐÚNG MỘT trong hai dòng dưới — dòng [hybrid] đã bao gồm dòng kia.
+#
+#   (a) chỉ fast mode  — 0.05s/trang, accuracy 0.72, không cần server
+# opendataloader-pdf
+#
+#   (b) có cả hybrid   — 0.43s/trang, accuracy 0.90, cần chạy server nền:
+#                        opendataloader-pdf-hybrid --port 5002
+opendataloader-pdf[hybrid]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# EMBEDDING providers khác
+# ─────────────────────────────────────────────────────────────────────────────
+
+# cohere==5.13.12
+# langchain-cohere==0.4.3
+
+# google-generativeai==0.8.3
+# langchain-google-genai==2.0.11
+
+# ollama==0.4.7
+# langchain-ollama==0.2.3
+
+# Dùng khi chọn embedding model của Voyage/Jina trong semantic chunking
+# langchain-voyageai==0.1.4
+
+# ─────────────────────────────────────────────────────────────────────────────
+# VECTOR DB khác
+# ─────────────────────────────────────────────────────────────────────────────
+
+# qdrant-client==1.13.3
+# langchain-qdrant==0.2.0
+
+# lancedb==0.17.0
+
+# weaviate-client==4.10.4
+# langchain-weaviate==0.0.3
+
+# psycopg[binary]==3.2.4
+# langchain-postgres==0.0.13
+
+# pinecone==5.0.1
+# langchain-pinecone==0.2.0
+
+# ─────────────────────────────────────────────────────────────────────────────
+# GENERATION (LLM) providers khác
+# ─────────────────────────────────────────────────────────────────────────────
+
+# anthropic==0.43.0
+# (google / ollama / cohere: dùng chung gói đã khai ở phần embedding)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TIẾNG VIỆT & sparse nâng cao
+# ─────────────────────────────────────────────────────────────────────────────
+
+# underthesea — tách câu tiếng Việt cho `sentence_aware` chunking.
+# Không có gói này, repo tự fallback sang NLTK rồi regex (chất lượng thấp hơn).
+underthesea==6.8.4
+
+# SPLADE sparse neural embedding — tốt hơn BM25, model ~500 MB, nên có GPU.
+# transformers==4.47.1
+#
+# ⚠️ KHÔNG pin torch ở đây. `pip install torch` lấy bản mặc định PyPI:
+#    Linux → CUDA · Windows → CPU-only (GPU nằm im, không báo lỗi) · macOS → MPS
+#    Và nếu pin ở đây, nó sẽ GHI ĐÈ bản GPU bạn đã cài.
+#    Luôn cài torch ở bước CUỐI CÙNG, bằng:
+#        python scripts/install_torch.py --apply
+#    Chi tiết: README mục 4.6

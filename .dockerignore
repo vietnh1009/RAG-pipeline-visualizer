@@ -1,0 +1,31 @@
+.git
+.gitignore
+.venv
+venv
+env
+__pycache__
+**/__pycache__
+*.py[cod]
+.pytest_cache
+.mypy_cache
+.ruff_cache
+
+# KHÔNG copy secret vào image — .env được mount lúc runtime qua env_file
+.env
+.env.*
+!.env.example
+
+# cache / output sinh ra lúc chạy — không thuộc về image
+processed_data/
+storage/
+.marker_cache/
+.docling_cache/
+smoke_report.json
+smoke_report.md
+
+# dữ liệu mẫu nặng — mount qua volume ./data thay vì bake vào image
+data/*.pdf
+data/*.docx
+
+*.md
+!README.md

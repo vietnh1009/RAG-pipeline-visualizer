@@ -1,0 +1,408 @@
+# =============================================================================
+# RAG Pipeline — Cấu hình
+# Chỉnh sửa file này để chọn kỹ thuật cho từng bước trong pipeline.
+# Tất cả tuỳ chọn đều được giải thích chi tiết bên dưới.
+# =============================================================================
+
+# ─── Dữ liệu ─────────────────────────────────────────────────────────────────
+data:
+  input_dir: ./data       # Thư mục chứa tài liệu nguồn
+  language: both          # "vi" | "en" | "both"
+
+# ─── Indexing Pipeline ───────────────────────────────────────────────────────
+indexing:
+
+  # ---------------------------------------------------------------------------
+  # Loader — Đọc tài liệu
+  # ---------------------------------------------------------------------------
+  loader:
+
+    # PDF Strategy — thư viện để parse file PDF
+    #
+    #   "pypdf"        Nhanh, text layer only, không cần dep thêm  [khuyên dùng mặc định]
+    #   "pymupdf"      Nhanh hơn pypdf, giữ layout tốt hơn
+    #                  Cài: pip install pymupdf
+    #   "pdfplumber"   Tốt nhất để trích bảng từ PDF text layer
+    #                  Cài: pip install pdfplumber tabulate
+    #   "unstructured" Tốt nhất tổng thể: OCR + bảng + hình ảnh
+    #                  Cài: pip install 'unstructured[pdf]' unstructured-inference
+    #   "docling"      IBM Research parser, Markdown output xuất sắc
+    #                  Cài: pip install docling
+    #   "marker"       PDF → Markdown chất lượng cao, xử lý bảng & công thức
+    #                  Bao gồm: Surya OCR + layout model + table model + formula model
+    #                  Cài: pip install marker-pdf
+    #
+    pdf_strategy: pypdf
+
+    # OCR Engine — model nhận dạng chữ từ ảnh/scan (chạy hoàn toàn LOCAL)
+    #
+    #   "none"       Không dùng OCR — chỉ đọc text layer  [mặc định]
+    #
+    #   "tesseract"  Truyền thống, rule-based, 100+ ngôn ngữ
+    #                Tốt cho: văn bản in rõ trên nền trắng
+    #                Cài: pip install pytesseract Pillow
+    #                     + sudo apt install tesseract-ocr tesseract-ocr-vie  (Ubuntu)
+    #                     + brew install tesseract tesseract-lang              (macOS)
+    #
+    #   "paddleocr"  Deep learning, layout detection tích hợp
+    #                Tốt cho: tiếng Việt, CJK, layout phức tạp, chữ nghiêng
+    #                Cài: pip install paddlepaddle paddleocr
+    #
+    #   "easyocr"    Deep learning (CRAFT + CRNN), 80+ ngôn ngữ
+    #                Tốt cho: đa ngôn ngữ, dễ cài, ổn định CPU & GPU
+    #                Cài: pip install easyocr
+    #
+    #   "surya"      Transformer-based, 90+ ngôn ngữ, by datalab.to
+    #                (Tên cũ của thư viện này là "Chandra OCR")
+    #                Tốt cho: đa ngôn ngữ chất lượng cao, layout detection
+    #                Cài: pip install surya-ocr
+    #
+    #   "got_ocr2"   GOT-OCR 2.0 (General OCR Theory v2, 2024)
+    #                Mô hình VLM end-to-end mạnh nhất hiện tại
+    #                Xử lý được: văn bản thường, bảng, công thức toán (LaTeX),
+    #                            code, handwriting, biểu đồ kỹ thuật
+    #                Model: ucaslcl/GOT-OCR2_0 (~4 GB, tải tự động lần đầu)
+    #                Cài: pip install transformers torch
+    #                Cần: ~8 GB VRAM (GPU) hoặc ~16 GB RAM (CPU)
+    #
+    #   "doctr"      docTR — Document Text Recognition (Mindee, 2021+)
+    #                Kiến trúc 2-stage: DBNet (detection) + CRNN/ViT (recognition)
+    #                Tốt cho: tài liệu in, hỗ trợ tiếng Việt
+    #                Cài: pip install python-doctr[torch]      (PyTorch backend)
+    #                     pip install python-doctr[tensorflow] (TensorFlow backend)
+    #
+    #   "rapidocr"   RapidOCR — PaddleOCR được chuyển sang ONNX format
+    #                Siêu nhẹ (~50 MB), CPU nhanh, không cần PaddlePaddle
+    #                Tốt cho: deploy nhẹ, edge devices, CPU-only
+    #                Cài: pip install rapidocr-onnxruntime
+    #
+    ocr_engine: none
+
+    # Trích xuất bảng → định dạng Markdown (dùng với pdfplumber, unstructured)
+    extract_tables: true
+
+    # Dùng VLM mô tả hình ảnh trong PDF (chậm, tốn API token)
+    extract_images: false
+    vision_model: gpt-4o-mini         # Dùng khi extract_images: true
+
+  # ---------------------------------------------------------------------------
+  # Chunking — Chia nhỏ tài liệu
+  # ---------------------------------------------------------------------------
+  chunking:
+    # Chiến lược chunking:
+    #
+    #   "recursive"       Cắt theo thứ tự: đoạn → dòng → câu → ký tự
+    #                     Khuyến nghị mặc định cho hầu hết trường hợp  [★]
+    #
+    #                     Dùng cho: prototype nhanh
+    #
+    #   "token_based"     Đếm token thay vì ký tự (dùng tiktoken)
+    #                     Quan trọng với tiếng Việt — tránh silent truncation
+    #
+    #   "sentence_aware"  Ranh giới chunk luôn trùng cuối câu
+    #                     Dùng cho: FAQ, Q&A, câu ngắn
+    #
+    #   "semantic"        Phát hiện ranh giới chủ đề qua cosine similarity
+    #                     Dùng cho: văn bản đa chủ đề
+    #                     Cần: pip install sentence-transformers
+    #
+    #                     Giải quyết vấn đề coreference ("nó", "đây", ...)
+    #                     Cần model long-context (≥8K tokens)
+    #
+    #   "contextual"      LLM sinh context prefix cho mỗi chunk (Anthropic, 2024)
+    #                     Cải thiện recall đáng kể. Cần: LLM API key
+    #
+    #                     Chất lượng cao nhất, chậm & đắt. Dùng cho corpus nhỏ
+    #
+    #   "hierarchical"    Tạo cặp parent (lớn) + child (nhỏ)
+    #                     Search child → trả parent cho LLM
+    #
+    #                     Tốt nhất cho knowledge base dạng fact
+    #
+    #   "format_aware"    Cắt theo cấu trúc tài liệu:
+    #                     Markdown → heading boundaries
+    #                     Code     → AST function/class boundaries
+    #                     HTML     → semantic tag boundaries
+    #
+    #                      (section + paragraph + sentence)
+    #
+    #
+    strategy: recursive
+
+    chunk_size: 1000          # Số ký tự mỗi chunk (hoặc số token nếu dùng token_based)
+    chunk_overlap: 150        # Số ký tự chồng lấp giữa chunk liền kề
+
+    # Tham số cho "token_based":
+    token_encoding: cl100k_base       # "cl100k_base" (GPT-4) | "p50k_base"
+
+    llm_provider: anthropic                   # "openai" | "anthropic" | "google"
+
+    # Tham số cho "semantic":
+    semantic_embedding_model: sentence-transformers/all-MiniLM-L6-v2
+    semantic_breakpoint_type: percentile      # "percentile" | "standard_deviation"
+    semantic_breakpoint_threshold: 95.0
+
+    # Tham số cho "hierarchical":
+    parent_chunk_size: 2000
+    child_chunk_size: 400
+
+    # Tham số cho "format_aware":
+    format_type: auto                         # "auto" | "markdown" | "code" | "html"
+
+  # ---------------------------------------------------------------------------
+  # Embedding — Biểu diễn vector
+  # ---------------------------------------------------------------------------
+  embedding:
+    # Provider:
+    #   "openai"       text-embedding-3-small/large (MRL support)
+    #   "cohere"       embed-multilingual-v3.0 — tốt cho tiếng Việt
+    #   "huggingface"  BAAI/bge-m3, Qwen/Qwen3-Embedding, ... (local)
+    #   "ollama"       nomic-embed-text, mxbai-embed-large (fully local)
+    #   "fastembed"    ONNX-based, CPU nhanh (by Qdrant)
+    provider: openai
+
+    # Model theo provider:
+    #   openai:      "text-embedding-3-small" | "text-embedding-3-large"
+    #   cohere:      "embed-multilingual-v3.0" | "embed-english-v3.0"
+    #   huggingface: "BAAI/bge-m3" | "Qwen/Qwen3-Embedding" |
+    #                "intfloat/multilingual-e5-large" | "nomic-ai/nomic-embed-text-v1.5"
+    #   ollama:      "nomic-embed-text" | "mxbai-embed-large" | "bge-m3"
+    #   fastembed:   "BAAI/bge-small-en-v1.5" | "intfloat/multilingual-e5-small"
+    model_name: text-embedding-3-small
+
+    # Thiết bị cho model local (huggingface, fastembed, ollama):
+    device: cpu                               # "cpu" | "cuda" | "mps"
+
+    # Instruction prefix cho model instruction-following
+    # (Qwen3-Embedding, E5-mistral, GTE-Qwen2):
+    query_instruction: null                   # null = không dùng instruction
+    document_instruction: null
+
+    # Sparse embedding cho hybrid retrieval:
+    enable_sparse: false
+    sparse_method: bm25                       # "bm25" | "splade"
+
+    # MRL — Matryoshka Representation Learning (text-embedding-3-*, Qwen3-Embedding):
+    dimensions: null                          # null = dùng dim mặc định; e.g. 512
+
+  # ---------------------------------------------------------------------------
+  # Vector Database — Lưu trữ vector
+  # ---------------------------------------------------------------------------
+  vector_db:
+    # Provider:
+    #   "faiss"    Local, in-process, không cần server — tốt cho prototype
+    #   "chroma"   Local persistent, developer-friendly
+    #   "pinecone" Managed cloud, auto-scale ~1B vectors
+    #   "qdrant"   Self/cloud, filtering tốt nhất (ACORN), ~1B+ vectors
+    #   "weaviate" Self/cloud, hybrid search native, ~1B vectors
+    #   "pgvector" PostgreSQL extension, ACID, ~50M vectors
+    #   "lancedb"  Serverless columnar (Arrow/Lance), ~1B vectors
+    provider: chroma
+
+    collection_name: rag_collection
+    persist_dir: ./storage            # Dùng cho faiss, chroma, lancedb
+
+    # Ngưỡng score tối thiểu khi dùng similarity_score_threshold search:
+    search_score_threshold: 0.3
+
+    qdrant_on_disk: false
+
+    # Pinecone cloud config:
+    pinecone_cloud: aws               # "aws" | "gcp" | "azure"
+    pinecone_region: us-east-1
+
+# ─── Query Pipeline ───────────────────────────────────────────────────────────
+query_pipeline:
+
+  # ---------------------------------------------------------------------------
+  # Pre-Retrieval — Biến đổi câu hỏi trước khi tìm kiếm
+  # ---------------------------------------------------------------------------
+  pre_retrieval:
+    # Danh sách biến đổi áp dụng theo thứ tự:
+    #
+    #   "none"           Không biến đổi — truyền thẳng
+    #   "rewrite"        LLM sửa chính tả/ngữ pháp, làm rõ đại từ
+    #   "expand"         Thêm từ đồng nghĩa và thuật ngữ liên quan
+    #                    Mode: "llm" (mặc định) hoặc "wordnet" (English only, free)
+    #   "step_back"      Tổng quát hoá câu hỏi để tìm kiến thức nền tảng
+    #   "multi_query"    Tách thành N câu hỏi từ các góc nhìn khác nhau
+    #   "decompose"      Tách câu hỏi phức tạp thành các câu hỏi con độc lập
+    #   "self_query"     Trích xuất metadata filter từ ngôn ngữ tự nhiên
+    #   "route"          Định tuyến đến collection/strategy phù hợp
+    #
+    # Gợi ý:
+    #   Tier 1 (an toàn, ít latency):  [rewrite]
+    #   Tier 2 (recall tốt hơn):       [rewrite, multi_query]
+    #   Tier 3 (production):           [rewrite, self_query, multi_query]
+    #
+    transformations: [rewrite]
+
+    transformation_llm: gpt-4.1-mini  # LLM dùng cho các bước biến đổi
+
+    # Tham số cho "multi_query":
+    multi_query_count: 3              # Số câu hỏi con tạo ra
+
+    # Tham số cho "expand":
+    expansion_mode: llm               # "llm" | "wordnet"
+    num_expansions: 3
+
+    # Tham số cho "decompose":
+    decomposition_mode: parallel      # "parallel" | "sequential"
+    max_sub_questions: 4
+
+    # Tham số cho "self_query" — định nghĩa metadata có thể filter:
+    # Ví dụ:
+    # self_query_schema:
+    #   language: "ngôn ngữ tài liệu: vi hoặc en"
+    #   year: "năm xuất bản (số nguyên)"
+    #   source: "tên file nguồn"
+    #   doc_type: "loại tài liệu: guideline, report, faq"
+    self_query_schema: {}
+
+    # Tham số cho "route":
+    routing_mode: llm                 # "llm" | "keyword" | "semantic"
+    default_route: general
+    routes: {}                        # Ví dụ: {medical: "câu hỏi y tế", legal: "luật pháp"}
+    route_rules: null                 # Cho keyword mode: [[pattern, route], ...]
+
+  # ---------------------------------------------------------------------------
+  # Retrieval — Tìm kiếm tài liệu
+  # ---------------------------------------------------------------------------
+  retrieval:
+    # Chiến lược:
+    #   "dense"           Vector similarity thuần
+    #   "sparse"          BM25 keyword search thuần
+    #   "multi_query"     Chạy N query, merge kết quả qua RRF
+    #   "parent_document" Search child chunk → trả parent (cần hierarchical chunking)
+    #   "sentence_window" Search câu → mở rộng ±N câu xung quanh
+    #   "multi_hop"       Retrieve → LLM → follow-up → retrieve (lặp)
+    #   "contextual"      Dense + score threshold + MMR diversity
+    strategy: hybrid
+
+    top_k: 20                         # Số candidates trước bước reranking
+
+    fusion_method: rrf                # "rrf" | "weighted" | "dbsf"
+    rrf_k: 60                         # Hằng số RRF (paper gốc dùng 60)
+    hybrid_alpha: 0.5                 # Trọng số dense trong weighted fusion (0–1)
+
+    # Tham số cho "sentence_window":
+    sentence_window_size: 2           # Số câu mở rộng mỗi bên
+
+    # Tham số cho "multi_hop":
+    multi_hop_max_hops: 3
+
+  # ---------------------------------------------------------------------------
+  # Post-Retrieval — Xử lý kết quả truy xuất
+  # ---------------------------------------------------------------------------
+  post_retrieval:
+    # Reranker — xếp hạng lại theo mức độ liên quan:
+    #
+    #   "none"          Bỏ qua bước reranking
+    #
+    #   "cross_encoder" Local cross-encoder — đề xuất cho tiếng Việt  [★]
+    #                   Model gợi ý:
+    #                     "BAAI/bge-reranker-v2-m3"              Multilingual, tốt nhất cho VI+EN
+    #                     "BAAI/bge-reranker-large"              Multilingual, chất lượng cao hơn
+    #                     "cross-encoder/ms-marco-MiniLM-L-6-v2" Nhanh, English only
+    #                     "cross-encoder/ms-marco-MiniLM-L-12-v2" Tốt hơn, English only
+    #                     "mixedbread-ai/mxbai-rerank-large-v1"  English, mạnh
+    #                   Cài: pip install sentence-transformers
+    #
+    #   "cohere"        Cohere Rerank API — multilingual, 100+ ngôn ngữ
+    #                   Model: "rerank-v3.5" | "rerank-multilingual-v3.0"
+    #                   Env: COHERE_API_KEY
+    #
+    #
+    #
+    #   "llm"           LLM listwise reranker (RankGPT-style)
+    #                   LLM đọc tất cả chunk và xếp hạng holistically
+    #                   Tốt cho top_n ≤ 10; chậm với top_n lớn
+    #
+    #
+    reranker: cross_encoder
+    cross_encoder_model: BAAI/bge-reranker-v2-m3
+
+    cohere_rerank_model: rerank-v3.5
+
+    # Số chunk giữ lại sau reranking:
+    top_n: 5
+
+    # Dedup semantic (near-duplicate removal) — chạy TRƯỚC reranking:
+    apply_redundancy: true
+    redundancy_threshold: 0.92        # Ngưỡng cosine similarity để coi là trùng lặp
+
+    # MMR diversity filter — chạy SAU reranking:
+    apply_mmr: false
+    mmr_lambda: 0.5                   # 0 = max diversity, 1 = max relevance
+
+    # LLM binary filter — giữ/bỏ từng chunk bằng YES/NO:
+    apply_llm_filter: false
+
+    # Contextual compression — LLM trích đoạn liên quan từ mỗi chunk:
+    apply_compression: false
+    compression_mode: extract         # "extract" (verbatim) | "summarise"
+
+    # Hard metadata filter — lọc theo field metadata (chạy đầu tiên):
+    # Ví dụ:
+    # metadata_conditions:
+    #   - field: language
+    #     operator: eq
+    #     value: vi
+    #   - field: year
+    #     operator: gte
+    #     value: 2022
+    metadata_conditions: null
+
+    # Xếp lại thứ tự chunk để giảm "lost-in-the-middle":
+    #   "sandwich"   Chunk tốt nhất ở đầu và cuối  [★ khuyên dùng]
+    #   "relevance"  Giảm dần theo score
+    #   "reverse"    Tăng dần (chunk tốt nhất ở cuối)
+    #   "original"   Giữ nguyên thứ tự từ retriever
+    context_ordering: sandwich
+
+  # ---------------------------------------------------------------------------
+  # Prompt Construction — Xây dựng prompt  (Bước 10)
+  # ---------------------------------------------------------------------------
+  prompt:
+    # Template:
+    #   "citation"       Yêu cầu LLM trích dẫn [NGUỒN N] inline  [★ khuyên dùng]
+    #   "basic"          Prompt tối giản, grounded chặt
+    #   "conversational" Hội thoại nhiều lượt với lịch sử
+    #   "structured"     JSON output (answer + claims + sources + confidence)
+    template: citation
+
+    # Giới hạn tổng ký tự context đưa vào prompt (0 = không giới hạn):
+    max_context_chars: 0
+
+    # Instruction bổ sung gắn vào system message (tuỳ chọn):
+    # system_instruction: "Trả lời bằng tiếng Việt."
+
+    # Chỉ dùng với template "conversational":
+    max_history_turns: 5
+
+    # Chỉ dùng với template "citation":
+    validate_citations: true
+
+    # Chỉ dùng với template "structured":
+    include_confidence: true
+
+  # ---------------------------------------------------------------------------
+  # Generation — Sinh câu trả lời  (Bước 11)
+  # ---------------------------------------------------------------------------
+  generation:
+    # Provider:
+    #   "openai"    gpt-4.1-mini (rẻ, nhanh, ⭐ mặc định) | gpt-4o | gpt-4o-mini | o3-mini
+    #   "anthropic" claude-haiku-4-5-20251001 (rẻ nhất) | claude-sonnet-4-6 | claude-opus-4-6
+    #   "google"    gemini-2.0-flash (⭐ free tier) | gemini-2.0-flash-lite | gemini-1.5-pro
+    #   "ollama"    qwen2.5:7b (⭐ VI tốt) | llama3.2:3b | mistral:7b | gemma2:2b | phi4-mini
+    #   "cohere"    command-r-plus (RAG-optimised) | command-r
+    provider: openai
+    model_name: gpt-4.1-mini
+
+    temperature: 0.0                  # 0 = deterministic, cao hơn = đa dạng hơn
+    max_tokens: 2048
+    streaming: true                   # Hiển thị câu trả lời từng token
+
+    # Chỉ dùng với provider "ollama":
+    base_url: http://localhost:11434
+    auto_pull: true                   # Tự pull model nếu chưa có

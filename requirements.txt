@@ -1,0 +1,78 @@
+# ╔══════════════════════════════════════════════════════════════════════════╗
+# ║  RAG-pipeline-visualizer — requirements.txt  (CORE / bắt buộc)           ║
+# ║                                                                          ║
+# ║  Python được hỗ trợ: 3.10 – 3.12.  KHÔNG dùng 3.13.                      ║
+# ║  (chromadb, faiss-cpu, sentence-transformers ở các pin dưới đây          ║
+# ║   chưa có wheel cho 3.13 → pip sẽ build from source và hỏng.)            ║
+# ║                                                                          ║
+# ║  Mọi dependency TRỰC TIẾP đều pin bằng ==.                               ║
+# ║  Dependency GIÁN TIẾP (transitive) không được pin ở file này —           ║
+# ║  đó là lý do cài đặt vẫn có thể "hên xui". Muốn tái lập 100%:            ║
+# ║      · Cách tốt nhất : uv pip install -r requirements.lock.txt          ║
+# ║                        (xem README mục 4.2)                              ║
+# ║      · Hoặc          : docker compose up                                 ║
+# ║  Sinh lại lockfile   : python scripts/freeze_lock.py                     ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+
+# ── App shell ────────────────────────────────────────────────────────────────
+# ⚠️ Code dùng `width="stretch"` cho button/dataframe — tham số này chỉ có từ
+# Streamlit 1.49 (08/2025). Pin cũ 1.45.1 gây:
+#     TypeError: ButtonMixin.button() got an unexpected keyword argument 'width'
+# Xác nhận bản khả dụng rồi pin cứng lại:  pip index versions streamlit
+streamlit>=1.49,<2
+python-dotenv==1.0.1
+PyYAML==6.0.2                    # đọc config.yaml (trước đây là dep ngầm)
+
+# ── LangChain ────────────────────────────────────────────────────────────────
+langchain-core==0.3.63
+langchain-text-splitters==0.3.8
+langchain-community==0.3.24
+langchain-experimental==0.3.4    # semantic chunking
+
+# ── Data / utils ─────────────────────────────────────────────────────────────
+numpy==1.26.4                    # <2.0: chromadb 0.6.x và faiss-cpu 1.9.x cần ABI numpy 1.x
+pandas==2.2.3
+tabulate==0.9.0                  # pdfplumber xuất bảng ra Markdown
+
+# ── LOADER (bắt buộc) ────────────────────────────────────────────────────────
+pypdf==5.1.0
+pymupdf==1.24.14
+pdfplumber==0.11.4
+
+# ── CHUNKING ─────────────────────────────────────────────────────────────────
+tiktoken==0.8.0                  # token_based chunking (trước đây là dep ngầm)
+sentence-transformers==3.3.1     # semantic chunking + cross-encoder reranker
+rank-bm25==0.2.2                 # sparse embedding / hybrid retrieval
+datasketch==1.6.5                # MinHash deduplication
+nltk==3.9.1                      # sentence_aware chunking
+
+# ── EMBEDDING (mặc định) ─────────────────────────────────────────────────────
+openai==1.68.2                   # TRƯỚC ĐÂY LÀ `openai>1.58.1` → nguồn gốc chính của
+                                 # việc "lúc được lúc không". langchain-openai 0.3.10
+                                 # yêu cầu openai>=1.68.2,<2 nên phải pin từ 1.68.2.
+langchain-openai==0.3.10
+langchain-huggingface==0.1.2
+huggingface-hub==0.26.5          # snapshot_download trong core/pipeline_runners.py
+fastembed==0.4.2
+
+# ── PYTORCH ──────────────────────────────────────────────────────────────────
+# CỐ Ý KHÔNG khai báo torch ở đây.
+#
+# 1. `pip install torch` cho biến thể khác nhau tuỳ OS:
+#       Linux → CUDA · Windows → CPU-only (GPU nằm im) · macOS → MPS
+# 2. Pin cứng một bản CUDA sẽ hỏng trên macOS và trên máy driver cũ.
+# 3. `--extra-index-url` trong file này áp dụng cho MỌI package, không riêng
+#    torch → pip sẽ tìm cả streamlit, chromadb... trên index PyTorch.
+#    Đó là rủi ro dependency-confusion, không đáng đánh đổi.
+#
+# torch được kéo vào gián tiếp qua sentence-transformers là đủ để chạy CPU.
+# Muốn dùng GPU, chạy bước RIÊNG sau khi cài xong file này:
+#
+#     python scripts/install_torch.py --apply
+#
+# Script tự dò driver và chọn đúng bản. Chi tiết: README mục 4.6
+
+# ── VECTOR DB (mặc định) ─────────────────────────────────────────────────────
+chromadb==0.6.3
+langchain-chroma==0.2.2
+faiss-cpu==1.9.0.post1
