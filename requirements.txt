@@ -9,8 +9,7 @@
 # ║  Dependency GIÁN TIẾP (transitive) không được pin ở file này —           ║
 # ║  đó là lý do cài đặt vẫn có thể "hên xui". Muốn tái lập 100%:            ║
 # ║      · Cách tốt nhất : uv pip install -r requirements.lock.txt          ║
-# ║                        (xem README mục 4.2)                              ║
-# ║      · Hoặc          : docker compose up                                 ║
+# ║                        (xem README mục 4.1)                              ║
 # ║  Sinh lại lockfile   : python scripts/freeze_lock.py                     ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 

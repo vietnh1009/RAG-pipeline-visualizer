@@ -32,13 +32,10 @@
 2. [Cấu trúc Project](#2-cấu-trúc-project)
 3. [Yêu cầu hệ thống](#3-yêu-cầu-hệ-thống)
 4. [Tạo môi trường & Cài đặt](#4-tạo-môi-trường--cài-đặt)
-   - [4.1 Vì sao trước đây "lúc chạy được lúc không"](#41--vì-sao-trước-đây-lúc-chạy-được-lúc-không)
-   - [4.2 Cách cài khuyến nghị: `uv` + `.venv`](#42--cách-cài-khuyến-nghị-uv--venv-trong-thư-mục-project-) ⭐
-   - [4.3 Kiểm tra môi trường đã đúng chưa](#43--kiểm-tra-môi-trường-đã-đúng-chưa)
-   - [4.4 Thêm / cập nhật thư viện](#44--thêm--cập-nhật-thư-viện-trong-lúc-phát-triển)
-   - [4.5 Docker](#45--docker-dùng-khi-nào-và-làm-sao-để-không-phải-build-lại-liên-tục)
-   - [4.6 Nếu muốn giữ conda](#46--nếu-muốn-giữ-conda)
-   - [4.7 Thư viện tuỳ chọn, phụ thuộc hệ thống, GPU](#47--thư-viện-tuỳ-chọn-phụ-thuộc-hệ-thống-và-gpu)
+   - [4.1 Cách cài khuyến nghị: `uv` + `.venv`](#41--cách-cài-khuyến-nghị-uv--venv-trong-thư-mục-project-) ⭐
+   - [4.2 Kiểm tra môi trường đã đúng chưa](#42--kiểm-tra-môi-trường-đã-đúng-chưa)
+   - [4.3 Nếu muốn giữ conda](#43--nếu-muốn-giữ-conda)
+   - [4.4 Thư viện tuỳ chọn, phụ thuộc hệ thống, GPU](#44--thư-viện-tuỳ-chọn-phụ-thuộc-hệ-thống-và-gpu)
 5. [Cấu hình API Keys](#5-cấu-hình-api-keys)
 6. [Khởi động ứng dụng](#6-khởi-động-ứng-dụng)
 7. [Hướng dẫn sử dụng — Indexing Pipeline](#7-hướng-dẫn-sử-dụng--indexing-pipeline)
@@ -200,13 +197,13 @@ RAG-pipeline-visualizer/
 > ⛔ **Không dùng Python 3.13.** `chromadb 0.6.3`, `faiss-cpu 1.9.0` và `numpy 1.26.4`
 > chưa có wheel dựng sẵn cho 3.13 — pip sẽ cố build từ source và hỏng giữa chừng.
 > Dải được hỗ trợ: **3.10 – 3.12**, khuyến nghị **3.11**.
-> Cách cài ở mục 4.2 **tự tải đúng Python 3.11**, nên bạn không thể cài nhầm.
+> Cách cài ở mục 4.1 **tự tải đúng Python 3.11**, nên bạn không thể cài nhầm.
 
 > 🎮 **GPU NVIDIA** — không bắt buộc. Chỉ tăng tốc `sentence-transformers`, cross-encoder
-> reranker, `marker` và SPLADE. Xem mục **4.7**.
+> reranker, `marker` và SPLADE. Xem mục **4.4**.
 
 > ☕ **Java 11+** — chỉ cần nếu dùng loader `opendataloader`. Kiểm tra: `java -version`.
-> Tải: https://adoptium.net/ · Bản Docker đã cài sẵn.
+> Tải: https://adoptium.net/
 
 > 💡 **Ollama (LLM local):** Khuyến nghị RAM ≥ 8 GB và SSD. GPU không bắt buộc nhưng tăng tốc đáng kể.
 
@@ -214,46 +211,14 @@ RAG-pipeline-visualizer/
 
 ## 4. Tạo môi trường & Cài đặt
 
-### 4.1 — Vì sao trước đây "lúc chạy được lúc không"
-
-Nếu bạn từng gặp cảnh hôm qua chạy được, hôm nay lỗi — đọc mục này trước, vì nhiều khả
-năng nguyên nhân không nằm ở code.
-
-Chẩn đoán thực tế trên máy phát triển project (30/07/2026):
-
-| Môi trường | Python | Tình trạng |
-|---|---|---|
-| `base` (conda — env mặc định khi mở terminal) | **3.13.2** | numpy 2.2.6, chromadb 1.4.0, langchain-core 1.2.6 — **sai toàn bộ pin**; thiếu hẳn faiss, pymupdf, pdfplumber, nltk |
-| `rag` (conda) | **3.13.14** | numpy 2.4.6, openai 2.46 — sai toàn bộ pin |
-| `rag_visualizer` (conda) | **3.11.15** | ✅ **đúng từng pin một** — đây là môi trường chạy được |
-
-**Project không hỏng. Việc chọn môi trường mới là thứ hỏng.**
-Terminal mở ra mặc định vào `base` (Python 3.13 — phiên bản project không hỗ trợ). Chạy
-`streamlit run app.py` mà quên `conda activate rag_visualizer` là hỏng ngay, và thông báo
-lỗi thường không nói gì về nguyên nhân thật.
-
-Ba nguyên nhân gốc, xếp theo mức độ gây hại:
-
-1. **Môi trường mặc định sai.** conda env nằm ngoài thư mục project → không có gì nhắc bạn
-   đang ở env nào. Đây là nguyên nhân số 1.
-2. **Không khoá dependency gián tiếp.** `requirements.txt` chỉ pin dependency **trực tiếp**;
-   phần còn lại resolve lại mỗi lần cài → hai máy cùng lệnh vẫn ra hai bộ thư viện khác nhau.
-   `requirements.lock.txt` khoá cả cây (276 gói).
-3. **`scripts/install_torch.py` từng chết ngay dòng in đầu tiên trên Windows.** Console
-   Windows mặc định là cp1252, không in được tiếng Việt → `UnicodeEncodeError`. Nghĩa là
-   bước cài torch trong tài liệu cũ *không thể chạy được*. Đã sửa cho cả
-   `install_torch.py` và `smoke_test.py`.
-
----
-
-### 4.2 — Cách cài khuyến nghị: `uv` + `.venv` trong thư mục project ⭐
+### 4.1 — Cách cài khuyến nghị: `uv` + `.venv` trong thư mục project ⭐
 
 `uv` là trình quản lý gói/môi trường thay cho `pip` + `venv`. Ba lý do chọn nó:
 
 - **Tự quản lý phiên bản Python.** File `.python-version` ghi `3.11`; `uv` đọc file đó và
   **tự tải Python 3.11** nếu máy chưa có → không còn cách nào cài nhầm 3.13.
 - **`.venv` nằm ngay trong thư mục project.** VS Code / PyCharm tự nhận. Không còn câu hỏi
-  "đang ở env nào" — tức là diệt tận gốc nguyên nhân số 1 ở mục 4.1.
+  "đang ở env nào" — nguyên nhân phổ biến nhất của lỗi "hôm qua chạy được, hôm nay hỏng".
 - **Nhanh.** Cài lại toàn bộ 276 gói từ lockfile vào env trắng: **~4 phút lần đầu**
   (243 giây đo thật trên máy này), **~2 phút các lần sau** khi cache của uv đã ấm.
   pip cùng việc đó mất khoảng 10–15 phút.
@@ -281,7 +246,7 @@ uv venv --python 3.11
 # 3. cài thư viện từ lockfile (đã khoá cả dependency gián tiếp)
 uv pip install -r requirements.lock.txt
 
-# 4. torch — LUÔN là bước cuối, LUÔN qua script này (xem mục 4.7)
+# 4. torch — LUÔN là bước cuối, LUÔN qua script này (xem mục 4.4)
 .\.venv\Scripts\python.exe scripts\install_torch.py --apply
 ```
 
@@ -311,7 +276,7 @@ source .venv/bin/activate          # macOS / Linux
 
 ---
 
-### 4.3 — Kiểm tra môi trường đã đúng chưa
+### 4.2 — Kiểm tra môi trường đã đúng chưa
 
 Chạy đủ ba lệnh. Cả ba xanh thì môi trường chắc chắn đúng.
 
@@ -329,101 +294,12 @@ python scripts\smoke_test.py --pdf data\test.pdf --mode single --offline
 #    → không có dòng FAIL nào (SKIP là bình thường — xem mục 12)
 ```
 
-Nếu lệnh 1 in `3.13` hoặc in đường dẫn tới `miniconda3` → bạn đang ở nhầm môi trường. Đó
-chính là lỗi cũ ở mục 4.1.
+Nếu lệnh 1 in `3.13` hoặc in đường dẫn tới `miniconda3` → bạn đang ở nhầm môi trường.
+Activate lại `.venv`, hoặc chạy qua `uv run` để khỏi phụ thuộc env đang active.
 
 ---
 
-### 4.4 — Thêm / cập nhật thư viện trong lúc phát triển
-
-Đây là vòng lặp hằng ngày. Không cần build lại gì cả.
-
-```powershell
-# thêm gói mới
-uv pip install qdrant-client==1.13.3
-
-# nếu gói đó ở lại lâu dài → ghi vào requirements.txt (hoặc requirements-extra.txt nếu
-# là tuỳ chọn), rồi khoá lại toàn bộ cây:
-python scripts\freeze_lock.py
-```
-
-`scripts/freeze_lock.py` chụp lại toàn bộ môi trường hiện tại vào `requirements.lock.txt`.
-Script **chạy `pip check` trước** và **từ chối sinh lock nếu môi trường có xung đột** — để
-không bao giờ khoá lại một môi trường hỏng.
-
-> **Đã bắt được một xung đột như vậy:** `unstructured-client 0.42.8` đòi `pypdf>=6.2.0`
-> trong khi project pin `pypdf==5.1.0`. pip cài im lặng không báo, nhưng resolver nghiêm
-> ngặt (uv) sẽ từ chối. Lockfile hiện ghim `unstructured-client==0.42.0` để tránh.
-
-**Ba file dependency, đừng nhầm:**
-
-| File | Khoá gì | Dùng khi nào |
-|---|---|---|
-| `requirements.txt` | chỉ dependency trực tiếp, pin `==` | nguồn khai báo — sửa ở đây khi thêm gói |
-| `requirements.lock.txt` | **toàn bộ 276 gói kể cả gián tiếp** | thứ thực sự đem đi cài — sinh tự động, đừng sửa tay |
-| `requirements-extra.txt` | nhóm tuỳ chọn, phần lớn đang comment | bỏ comment đúng nhóm cần |
-
----
-
-### 4.5 — Docker: dùng khi nào, và làm sao để không phải build lại liên tục
-
-**Kết luận ngắn: giai đoạn phát triển thì dùng mục 4.2, KHÔNG dùng Docker làm môi trường
-làm việc chính.** Cài lại bằng `uv` mất 134 giây; build lại image Docker mất 10–20 phút.
-Với nhịp thêm/sửa thư viện vài lần một ngày, chênh lệch đó là không chấp nhận được.
-
-Docker vẫn đáng giữ cho ba việc:
-
-| Việc | Vì sao Docker |
-|---|---|
-| Bàn giao / demo cho người khác | Khoá luôn cả Java, poppler, tesseract — thứ `pip` không cài được |
-| CI, kiểm tra "sạch máy" | Không dính rác từ máy dev |
-| Triển khai production | Chính là artifact đem đi deploy |
-
-#### Chạy bản đầy đủ
-
-```bash
-cp .env.example .env      # rồi điền API key
-mkdir -p data             # đặt tài liệu của bạn vào đây
-
-docker compose up --build                       # → http://localhost:8501
-PROFILE=full docker compose up --build          # + marker, docling, unstructured, opendataloader, cohere
-docker compose --profile qdrant up --build      # + Qdrant server
-docker compose --profile pgvector up --build    # + PostgreSQL/pgvector
-TORCH_CUDA=cu124 docker compose --profile gpu up --build   # bản GPU (host cần nvidia-container-toolkit)
-```
-
-Named volume giữ dữ liệu qua các lần chạy: `rag_processed` (cache pipeline), `rag_storage`
-(index), `rag_models` (model HuggingFace/Marker — tải một lần dùng mãi). `./data` được
-bind-mount.
-
-#### Nếu vẫn muốn dev trong Docker — cách để build lại là chuyện hiếm
-
-File `docker-compose.override.yml` bind-mount source vào container. Compose **tự đọc** file
-này, không cần cờ gì thêm.
-
-```bash
-docker compose up            # chạy MỘT lần, để đó cả ngày
-```
-
-- **Sửa code** → Streamlit tự reload. **Không build lại.**
-- **Thêm thư viện, cần ngay** → `docker compose exec app uv pip install <pkg>`
-  Có hiệu lực lập tức, không build lại. (Mất khi xoá container — nên chỉ là tạm.)
-- **Cuối ngày, ghi lại cho bền** → thêm vào `requirements.txt`, chạy
-  `python scripts/freeze_lock.py`, rồi `docker compose up --build` **một lần**.
-
-Lý do build lại thường nhanh hơn bạn nghĩ: `Dockerfile` copy `requirements*.txt` và cài thư
-viện ở layer riêng, **trước** khi copy source. Sửa code không làm hỏng layer thư viện → build
-lại chỉ chạy lại layer cuối. `Dockerfile` cũng tự ưu tiên `requirements.lock.txt` nếu có.
-
-Chạy đúng bản production (bỏ qua override):
-
-```bash
-docker compose -f docker-compose.yml up --build
-```
-
----
-
-### 4.6 — Nếu muốn giữ conda
+### 4.3 — Nếu muốn giữ conda
 
 Env `rag_visualizer` hiện tại đang đúng — không bắt buộc phải bỏ. Nhưng phải làm cho việc
 chọn env không còn phụ thuộc trí nhớ:
@@ -447,12 +323,12 @@ pip install -r requirements.lock.txt
 python scripts\install_torch.py --apply
 ```
 
-> Vẫn khuyến nghị chuyển sang `.venv` + `uv`: conda env nằm ngoài project chính là nguyên
-> nhân gốc của toàn bộ vấn đề ở mục 4.1.
+> Vẫn khuyến nghị chuyển sang `.venv` + `uv`: conda env nằm ngoài project là nguyên nhân
+> gốc của phần lớn các lỗi "chạy nhầm môi trường".
 
 ---
 
-### 4.7 — Thư viện tuỳ chọn, phụ thuộc hệ thống, và GPU
+### 4.4 — Thư viện tuỳ chọn, phụ thuộc hệ thống, và GPU
 
 #### Thư viện tuỳ chọn
 
@@ -474,7 +350,7 @@ Các nhóm: loader nâng cao (`marker-pdf`, `docling`, `unstructured[pdf]`, `ope
 
 #### Phụ thuộc hệ thống — `pip` không cài được
 
-Chỉ cần khi dùng đúng option tương ứng. Cả bốn đều đã có sẵn trong image Docker.
+Chỉ cần khi dùng đúng option tương ứng — không dùng option đó thì bỏ qua được.
 
 | Cần | Cho option | Kiểm tra |
 |---|---|---|
@@ -593,7 +469,7 @@ streamlit run app.py
 Mặc định app chạy tại: **[http://localhost:8501](http://localhost:8501)**
 
 > ⚠️ Nếu app báo lỗi import lạ hoặc `TypeError` khó hiểu, khả năng cao bạn đang chạy sai
-> môi trường. Kiểm tra bằng 3 lệnh ở **mục 4.3** trước khi debug code.
+> môi trường. Kiểm tra bằng 3 lệnh ở **mục 4.2** trước khi debug code.
 
 Nếu port 8501 đã bị chiếm:
 
@@ -1076,16 +952,16 @@ query_pipeline:
 ### Lỗi môi trường / cài đặt
 
 > 🔎 **Trước khi debug code, hãy loại trừ môi trường.** Phần lớn lỗi "khó hiểu" của project
-> này là do chạy sai Python. Chạy 3 lệnh kiểm tra ở **mục 4.3** trước.
+> này là do chạy sai Python. Chạy 3 lệnh kiểm tra ở **mục 4.2** trước.
 
 | Triệu chứng | Nguyên nhân / cách sửa |
 |---|---|
-| `sys.version` in ra 3.13, hoặc `sys.executable` trỏ tới `miniconda3` | Đang ở conda `base` chứ không phải `.venv` → `.\.venv\Scripts\Activate.ps1`, hoặc dùng `uv run` (mục 4.2) |
-| pip cố build `chromadb` / `faiss-cpu` từ source | Đang dùng Python 3.13 → tạo lại env trên 3.11 (mục 4.2) |
+| `sys.version` in ra 3.13, hoặc `sys.executable` trỏ tới `miniconda3` | Đang ở conda `base` chứ không phải `.venv` → `.\.venv\Scripts\Activate.ps1`, hoặc dùng `uv run` (mục 4.1) |
+| pip cố build `chromadb` / `faiss-cpu` từ source | Đang dùng Python 3.13 → tạo lại env trên 3.11 (mục 4.1) |
 | `UnicodeEncodeError: 'charmap' codec can't encode...` | Console Windows là cp1252, script in tiếng Việt. Đã sửa cho `install_torch.py` và `smoke_test.py`. Script mới phải copy 6 dòng `sys.stdout.reconfigure(encoding="utf-8")` ở đầu file |
 | `TypeError: button() got an unexpected keyword argument 'width'` | Streamlit < 1.49 → `uv pip install -U "streamlit>=1.49,<2"` |
 | Lỗi ABI kiểu `numpy.dtype size changed` | Có gì đó nâng numpy lên 2.x → `uv pip install numpy==1.26.4` |
-| `unstructured-client ... requires pypdf>=6.2.0` | Xung đột đã biết → `uv pip install unstructured-client==0.42.0` (xem mục 4.4) |
+| `unstructured-client ... requires pypdf>=6.2.0` | Xung đột đã biết (`unstructured-client 0.42.8` đòi `pypdf>=6.2.0` trong khi project pin `pypdf==5.1.0`) → `uv pip install unstructured-client==0.42.0` |
 | `uv pip check` báo xung đột sau khi thêm gói | Gói mới kéo theo phiên bản không tương thích → gỡ ra, hoặc pin lại; **đừng** chạy `freeze_lock.py` khi đang có xung đột |
 | Cài xong vẫn thiếu `faiss` / `pymupdf` / `nltk` | Cài nhầm vào env khác. Kiểm tra `sys.executable` rồi cài lại từ `requirements.lock.txt` |
 
@@ -1172,7 +1048,7 @@ Embedding model không phù hợp với ngôn ngữ trong tài liệu. Thử đ�
 Marker cần `torch`. Cài PyTorch **trước**, rồi mới cài marker:
 
 ```bash
-python scripts/install_torch.py --apply     # tự dò GPU/CUDA, xem mục 4.6
+python scripts/install_torch.py --apply     # tự dò GPU/CUDA, xem mục 4.4
 pip install marker-pdf==1.6.2
 ```
 
@@ -1233,7 +1109,7 @@ NLTK cần tải data lần đầu, và sẽ hỏng nếu máy không có mạng
 python -c "import nltk; nltk.download('punkt'); nltk.download('punkt_tab')"
 ```
 
-Bản Docker đã tải sẵn nên không gặp lỗi này.
+Nếu không tải được, `sentence_aware` tự fallback sang underthesea → NLTK → regex.
 
 ---
 
@@ -1243,7 +1119,7 @@ Bản Docker đã tải sẵn nên không gặp lỗi này.
 java -version     # phải là 11 trở lên
 ```
 
-Chưa có thì tải tại https://adoptium.net/. Bản Docker đã cài sẵn OpenJDK 17.
+Chưa có thì tải tại https://adoptium.net/ (OpenJDK 17 là bản đã kiểm chứng).
 
 ---
 
